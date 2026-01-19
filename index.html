@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Control de Gastos e Ingresos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body{
+    font-family:"Segoe UI",Roboto,Arial,sans-serif;
+    background:#f4f6f8;
+    margin:0;
+    padding:20px;
+    color:#333;
+}
+.app{
+    max-width:1100px;
+    margin:auto;
+    background:#fff;
+    border-radius:14px;
+    box-shadow:0 12px 35px rgba(0,0,0,.1);
+    padding:25px 30px 30px;
+}
+h1{text-align:center;margin-top:0}
+
+.controls{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:20px;
+}
+.controls select{
+    padding:10px;
+    font-size:14px;
+    border-radius:8px;
+    border:1px solid #ccc;
+    background:#fff;
+    font-family:inherit;
+}
+
+.summary{
+    display:flex;
+    gap:12px;
+    margin-bottom:25px;
+}
+.card{
+    flex:1;
+    background:#f9fafb;
+    border-radius:12px;
+    padding:16px;
+    text-align:center;
+}
+.card.ingresos{border-top:4px solid #2ecc71}
+.card.gastos{border-top:4px solid #e74c3c}
+.card.saldo{border-top:4px solid #3498db}
+.card p{
+    font-size:22px;
+    font-weight:700;
+    margin:6px 0 0;
+}
+
+.form{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:10px;
+    margin-bottom:20px;
+}
+.form input,.form select,.form button{
+    padding:10px;
+    font-size:14px;
+    border-radius:8px;
+    border:1px solid #ccc;
+}
+.form button{
+    grid-column:span 5;
+    background:#3498db;
+    color:#fff;
+    border:none;
+    cursor:pointer;
+}
+.form button:hover{background:#2980b9}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+th,td{
+    padding:10px;
+    border-bottom:1px solid #e1e4e8;
+}
+th{background:#f1f3f5}
+td.ingreso{color:#2ecc71;font-weight:600}
+td.gasto{color:#e74c3c;font-weight:600}
+
+.delete{
+    cursor:pointer;
+    opacity:.6;
+    text-align:center;
+}
+.delete:hover{
+    opacity:1;
+    color:#e74c3c;
+}
+
+.footer{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:25px;
+}
+.actions{
+    display:flex;
+    gap:12px;
+}
+.btn{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 18px;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    border:none;
+    transition:.2s ease;
+}
+.btn-import{background:#ecf0f1;color:#2c3e50}
+.btn-import:hover{background:#dde4e8}
+.btn-export{background:#2c3e50;color:#fff}
+.btn-export:hover{background:#1f2d3a}
+.btn-report{
+    background:#3498db;
+    color:#fff;
+    box-shadow:0 6px 18px rgba(52,152,219,.35);
+}
+.btn-report:hover{background:#2980b9}
+input[type="file"]{display:none}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+<h1>Control de Gastos e Ingresos</h1>
+
+<div class="controls">
+<select id="mes"></select>
+<select id="anio"></select>
+</div>
+
+<div class="summary">
+<div class="card ingresos"><h3>Ingresos</h3><p id="ingresos">0 €</p></div>
+<div class="card gastos"><h3>Gastos</h3><p id="gastos">0 €</p></div>
+<div class="card saldo"><h3>Saldo</h3><p id="saldo">0 €</p></div>
+</div>
+
+<div class="form">
+<input type="date" id="fecha">
+<select id="tipo">
+<option value="ingreso">Ingreso</option>
+<option value="gasto">Gasto</option>
+</select>
+<input type="number" id="cantidad" step="0.01" placeholder="Importe">
+<input type="text" id="concepto" placeholder="Concepto">
+<button onclick="agregar()">Añadir movimiento</button>
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Fecha</th>
+<th>Concepto</th>
+<th>Ingreso</th>
+<th>Gasto</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="tabla"></tbody>
+</table>
+
+<div class="footer">
+<div class="actions">
+<label class="btn btn-import">
+IMPORTAR
+<input type="file" accept=".csv" onchange="importarCSV(this)">
+</label>
+<button class="btn btn-export" onclick="exportarCSV()">EXPORTAR</button>
+</div>
+<button class="btn btn-report" onclick="generarPDF()">INFORME</button>
+</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* === COPIA TU CONFIGURACIÓN DE FIREBASE AQUÍ === */
+const firebaseConfig = {
+  apiKey: "AIzaSyBLqXvnSJs6D5I39xkXUMM3v5xQBMk8lTY",
+  authDomain: "control-gastos-65500.firebaseapp.com",
+  databaseURL: "https://control-gastos-65500-default-rtdb.firebaseio.com",
+  projectId: "control-gastos-65500",
+  storageBucket: "control-gastos-65500.firebasestorage.app",
+  messagingSenderId: "69402781054",
+  appId: "1:69402781054:web:a65b0307b0ac7b88493f2f"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* === VARIABLES DE LA APP === */
+const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const mesSel=mes,anioSel=anio;
+const hoy=new Date();
+
+meses.forEach((m,i)=>mesSel.add(new Option(m,i)));
+for(let y=hoy.getFullYear()-5;y<=hoy.getFullYear()+5;y++)anioSel.add(new Option(y,y));
+mesSel.value=hoy.getMonth();
+anioSel.value=hoy.getFullYear();
+fecha.valueAsDate=hoy;
+
+/* === FUNCIONES DE DATOS CON FIREBASE === */
+function guardar(d){
+    set(ref(db, 'finanzas'), d);
+}
+
+function datos(callback){
+    onValue(ref(db, 'finanzas'), (snapshot) => {
+        const d = snapshot.val() || [];
+        callback(d);
+    });
+}
+
+/* === FORMATEAR FECHA === */
+function formatearFechaISOaDMY(f){
+    const [y,m,d]=f.split("-");
+    return `${d}/${m}/${y}`;
+}
+
+/* === FUNCIONES PRINCIPALES === */
+function agregar(){
+    datos((d)=>{
+        d.push({
+            fecha: fecha.value,
+            tipo: tipo.value,
+            cantidad: +cantidad.value,
+            concepto: concepto.value
+        });
+        guardar(d);
+        cantidad.value="";
+        concepto.value="";
+        cargar();
+    });
+}
+
+function eliminar(index){
+    if(!confirm("¿Eliminar este movimiento?")) return;
+    datos((d)=>{
+        d.splice(index,1);
+        guardar(d);
+        cargar();
+    });
+}
+
+function cargar(){
+    datos((listaCompleta)=>{
+        let i=0,g=0;
+        tabla.innerHTML="";
+
+        const lista = listaCompleta
+            .filter(m=>{
+                const f=new Date(m.fecha);
+                return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
+            })
+            .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+
+        lista.forEach(m=>{
+            const index = listaCompleta.indexOf(m);
+            const tr=document.createElement("tr");
+            tr.innerHTML=`
+            <td>${formatearFechaISOaDMY(m.fecha)}</td>
+            <td>${m.concepto}</td>
+            <td class="ingreso">${m.tipo=="ingreso"?m.cantidad.toFixed(2):""}</td>
+            <td class="gasto">${m.tipo=="gasto"?m.cantidad.toFixed(2):""}</td>
+            <td class="delete" onclick="eliminar(${index})">🗑️</td>
+            `;
+            tabla.appendChild(tr);
+            m.tipo=="ingreso"?i+=m.cantidad:g+=m.cantidad;
+        });
+
+        ingresos.textContent=i.toFixed(2)+" €";
+        gastos.textContent=g.toFixed(2)+" €";
+        saldo.textContent=(i-g).toFixed(2)+" €";
+    });
+}
+
+/* === CSV y PDF sin cambios funcionales === */
+function exportarCSV(){
+    datos((d)=>{
+        let csv="Fecha;Concepto;Ingreso;Gasto\n";
+        d.forEach(m=>{
+            csv+=`${m.fecha};${m.concepto};${m.tipo=="ingreso"?m.cantidad:""};${m.tipo=="gasto"?m.cantidad:""}\n`;
+        });
+        descargar(csv,"finanzas.csv","text/csv");
+    });
+}
+
+function importarCSV(input){
+    const r=new FileReader();
+    r.onload=e=>{
+        datos((d)=>{
+            e.target.result.split("\n").slice(1).forEach(l=>{
+                if(!l.trim())return;
+                const [f,c,i,g]=l.split(";");
+                d.push({fecha:f,concepto:c,tipo:i?"ingreso":"gasto",cantidad:+(i||g)});
+            });
+            guardar(d);cargar();
+        });
+    };
+    r.readAsText(input.files[0]);
+}
+
+function generarPDF(){
+    const pdf=new jsPDF("p","mm","a4");
+    let y=20;
+
+    pdf.setFontSize(16);
+    pdf.setFont("helvetica","bold");
+    pdf.text(
+        `INFORME INGRESOS Y GASTO DEL ${meses[mesSel.value].toUpperCase()} ${anioSel.value}`,
+        105,y,{align:"center"}
+    );
+
+    y+=12;
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica","normal");
+
+    pdf.text(`Total ingresos: ${ingresos.textContent}`,20,y); y+=6;
+    pdf.text(`Total gastos: ${gastos.textContent}`,20,y); y+=6;
+    pdf.text(`Saldo: ${saldo.textContent}`,20,y);
+
+    y+=12;
+    pdf.setFont("helvetica","bold");
+    pdf.text("Fecha",20,y);
+    pdf.text("Concepto",50,y);
+    pdf.text("Ingreso",135,y,{align:"right"});
+    pdf.text("Gasto",180,y,{align:"right"});
+
+    y+=4; pdf.line(20,y,190,y); y+=6;
+    pdf.setFont("helvetica","normal");
+
+    datos((d)=>{
+        d.filter(m=>{
+            const f=new Date(m.fecha);
+            return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
+        }).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha))
+        .forEach(m=>{
+            if(y>270){pdf.addPage();y=20;}
+            pdf.text(formatearFechaISOaDMY(m.fecha),20,y);
+            pdf.text(m.concepto.substring(0,45),50,y);
+            pdf.text(m.tipo=="ingreso"?m.cantidad.toFixed(2):"",135,y,{align:"right"});
+            pdf.text(m.tipo=="gasto"?m.cantidad.toFixed(2):"",180,y,{align:"right"});
+            y+=6;
+        });
+        pdf.save(`Informe_${meses[mesSel.value]}_${anioSel.value}.pdf`);
+    });
+}
+
+function descargar(c,n,t){
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([c],{type:t}));
+    a.download=n;
+    a.click();
+}
+
+mesSel.onchange=cargar;
+anioSel.onchange=cargar;
+cargar();
+
+
+// === EXPONER FUNCIONES AL HTML ===
+window.agregar = agregar;
+window.eliminar = eliminar;
+window.exportarCSV = exportarCSV;
+window.importarCSV = importarCSV;
+window.generarPDF = generarPDF;
+</script>
+
+</body>
+</html>
