@@ -194,7 +194,33 @@ IMPORTAR
 </div>
 </div>
 
-<script>
+<script type="module">
+
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBLqXvnSJs6D5I39xkXUMM3v5xQBMk8lTY",
+  authDomain: "control-gastos-65500.firebaseapp.com",
+  databaseURL: "https://control-gastos-65500-default-rtdb.firebaseio.com",
+  projectId: "control-gastos-65500",
+  storageBucket: "control-gastos-65500.firebasestorage.app",
+  messagingSenderId: "69402781054",
+  appId: "1:69402781054:web:a65b0307b0ac7b88493f2f"
+};
+
+/* Inicializar Firebase (NO usamos nada aún) */
+initializeApp(firebaseConfig);
+
+
+
+
+
+
+
+
+
+
 const { jsPDF } = window.jspdf;
 const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const mesSel=mes,anioSel=anio;
