@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
+/* === Tu CSS original === */
 body{
     font-family:"Segoe UI",Roboto,Arial,sans-serif;
     background:#f4f6f8;
@@ -32,7 +33,6 @@ h1{text-align:center;margin-top:0}
     margin-bottom:20px;
 }
 
-/* === Selectores MES / AÑO igual que inputs === */
 .controls select{
     padding:10px;
     font-size:14px;
@@ -195,10 +195,10 @@ IMPORTAR
 </div>
 
 <script type="module">
-
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+/* 🔹 TU CONFIGURACIÓN FIREBASE – reemplaza con la tuya */
 const firebaseConfig = {
   apiKey: "AIzaSyBLqXvnSJs6D5I39xkXUMM3v5xQBMk8lTY",
   authDomain: "control-gastos-65500.firebaseapp.com",
@@ -209,18 +209,11 @@ const firebaseConfig = {
   appId: "1:69402781054:web:a65b0307b0ac7b88493f2f"
 };
 
-/* Inicializar Firebase (NO usamos nada aún) */
-initializeApp(firebaseConfig);
 
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-
-
-
-
-
-
-
-
+/* === Variables y selects === */
 const { jsPDF } = window.jspdf;
 const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const mesSel=mes,anioSel=anio;
@@ -232,53 +225,54 @@ mesSel.value=hoy.getMonth();
 anioSel.value=hoy.getFullYear();
 fecha.valueAsDate=hoy;
 
-function datos(){
-    return JSON.parse(localStorage.getItem("finanzas")) || [];
+/* === FUNCIONES FIREBASE === */
+
+// Leer datos UNA sola vez
+async function leerDatos(){
+    const snapshot = await get(ref(db, 'finanzas'));
+    return snapshot.val() || [];
 }
+
+// Guardar datos
 function guardar(d){
-    localStorage.setItem("finanzas",JSON.stringify(d));
+    set(ref(db, 'finanzas'), d);
 }
 
-function formatearFechaISOaDMY(f){
-    const [y,m,d]=f.split("-");
-    return `${d}/${m}/${y}`;
-}
+/* === Funciones principales === */
 
-function agregar(){
-    const d=datos();
+async function agregar(){
+    const d = await leerDatos();
     d.push({
-        fecha:fecha.value,
-        tipo:tipo.value,
-        cantidad:+cantidad.value,
-        concepto:concepto.value
+        fecha: fecha.value,
+        tipo: tipo.value,
+        cantidad: +cantidad.value,
+        concepto: concepto.value
     });
     guardar(d);
     cantidad.value="";
     concepto.value="";
-    cargar();
 }
 
-function eliminar(index){
+async function eliminar(index){
     if(!confirm("¿Eliminar este movimiento?")) return;
-    const d=datos();
+    const d = await leerDatos();
     d.splice(index,1);
     guardar(d);
-    cargar();
 }
 
-function cargar(){
+async function cargar(){
+    const listaCompleta = await leerDatos();
     let i=0,g=0;
     tabla.innerHTML="";
 
-    const lista = datos()
+    const lista = listaCompleta
         .filter(m=>{
             const f=new Date(m.fecha);
             return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
         })
         .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
 
-    lista.forEach(m=>{
-        const index = datos().indexOf(m);
+    lista.forEach((m,index)=>{
         const tr=document.createElement("tr");
         tr.innerHTML=`
         <td>${formatearFechaISOaDMY(m.fecha)}</td>
@@ -296,26 +290,29 @@ function cargar(){
     saldo.textContent=(i-g).toFixed(2)+" €";
 }
 
-/* === CSV y PDF sin cambios funcionales === */
+/* === CSV y PDF === */
 
 function exportarCSV(){
     let csv="Fecha;Concepto;Ingreso;Gasto\n";
-    datos().forEach(m=>{
-        csv+=`${m.fecha};${m.concepto};${m.tipo=="ingreso"?m.cantidad:""};${m.tipo=="gasto"?m.cantidad:""}\n`;
+    leerDatos().then(datos=>{
+        datos.forEach(m=>{
+            csv+=`${m.fecha};${m.concepto};${m.tipo=="ingreso"?m.cantidad:""};${m.tipo=="gasto"?m.cantidad:""}\n`;
+        });
+        descargar(csv,"finanzas.csv","text/csv");
     });
-    descargar(csv,"finanzas.csv","text/csv");
 }
 
 function importarCSV(input){
     const r=new FileReader();
     r.onload=e=>{
-        const d=datos();
-        e.target.result.split("\n").slice(1).forEach(l=>{
-            if(!l.trim())return;
-            const [f,c,i,g]=l.split(";");
-            d.push({fecha:f,concepto:c,tipo:i?"ingreso":"gasto",cantidad:+(i||g)});
+        leerDatos().then(d=>{
+            e.target.result.split("\n").slice(1).forEach(l=>{
+                if(!l.trim())return;
+                const [f,c,i,g]=l.split(";");
+                d.push({fecha:f,concepto:c,tipo:i?"ingreso":"gasto",cantidad:+(i||g)});
+            });
+            guardar(d); cargar();
         });
-        guardar(d);cargar();
     };
     r.readAsText(input.files[0]);
 }
@@ -349,22 +346,29 @@ function generarPDF(){
     y+=4; pdf.line(20,y,190,y); y+=6;
     pdf.setFont("helvetica","normal");
 
-    datos()
-      .filter(m=>{
-        const f=new Date(m.fecha);
-        return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
-      })
-      .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha))
-      .forEach(m=>{
-        if(y>270){pdf.addPage();y=20;}
-        pdf.text(formatearFechaISOaDMY(m.fecha),20,y);
-        pdf.text(m.concepto.substring(0,45),50,y);
-        pdf.text(m.tipo=="ingreso"?m.cantidad.toFixed(2):"",135,y,{align:"right"});
-        pdf.text(m.tipo=="gasto"?m.cantidad.toFixed(2):"",180,y,{align:"right"});
-        y+=6;
-      });
+    leerDatos().then(datos=>{
+        datos
+          .filter(m=>{
+            const f=new Date(m.fecha);
+            return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
+          })
+          .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha))
+          .forEach(m=>{
+            if(y>270){pdf.addPage();y=20;}
+            pdf.text(formatearFechaISOaDMY(m.fecha),20,y);
+            pdf.text(m.concepto.substring(0,45),50,y);
+            pdf.text(m.tipo=="ingreso"?m.cantidad.toFixed(2):"",135,y,{align:"right"});
+            pdf.text(m.tipo=="gasto"?m.cantidad.toFixed(2):"",180,y,{align:"right"});
+            y+=6;
+          });
+        pdf.save(`Informe_${meses[mesSel.value]}_${anioSel.value}.pdf`);
+    });
+}
 
-    pdf.save(`Informe_${meses[mesSel.value]}_${anioSel.value}.pdf`);
+/* === Helper === */
+function formatearFechaISOaDMY(f){
+    const [y,m,d]=f.split("-");
+    return `${d}/${m}/${y}`;
 }
 
 function descargar(c,n,t){
@@ -376,15 +380,20 @@ function descargar(c,n,t){
 
 mesSel.onchange=cargar;
 anioSel.onchange=cargar;
-cargar();
 
-
+/* === Exponer funciones para HTML === */
 window.agregar = agregar;
 window.eliminar = eliminar;
-window.importarCSV = importarCSV;
 window.exportarCSV = exportarCSV;
+window.importarCSV = importarCSV;
 window.generarPDF = generarPDF;
 
+/* === Listener único para evitar duplicados === */
+onValue(ref(db, 'finanzas'), () => {
+    cargar();
+});
+
+cargar();
 </script>
 
 </body>
