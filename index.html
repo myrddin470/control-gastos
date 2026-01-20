@@ -203,6 +203,31 @@ input[type="file"]{display:none}
     }
 }
 
+/* Movil: menos de 600px */
+@media screen and (max-width: 600px) {
+
+    .form {
+        grid-template-columns: 1fr; /* 1 columna, todo ocupa el ancho */
+    }
+
+    .form input, .form select, .form button {
+        width: 100%;       /* cada input ocupa todo el ancho disponible */
+        box-sizing: border-box; /* evita desbordes */
+    }
+
+    .form button {
+        grid-column: span 1; /* ocupa toda la columna ahora */
+    }
+}
+
+@media screen and (max-width: 900px) {
+    .form {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+
+
 </style>
 </head>
 
