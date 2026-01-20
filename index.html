@@ -5,11 +5,10 @@
 <title>Control de Gastos e Ingresos</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
+/* === Tu CSS original === */
 body{
     font-family:"Segoe UI",Roboto,Arial,sans-serif;
     background:#f4f6f8;
@@ -33,6 +32,7 @@ h1{text-align:center;margin-top:0}
     gap:10px;
     margin-bottom:20px;
 }
+
 .controls select{
     padding:10px;
     font-size:14px;
@@ -140,26 +140,99 @@ td.gasto{color:#e74c3c;font-weight:600}
 .btn-report:hover{background:#2980b9}
 input[type="file"]{display:none}
 
-/* === RESPONSIVE === */
-@media screen and (max-width: 600px){
-    .controls{flex-direction:column; gap:8px;}
-    .form{grid-template-columns:1fr;}
-    .form input,.form select,.form button{width:100%; box-sizing:border-box; font-size:16px; padding:12px;}
-    .form button{grid-column:span 1;}
-    .summary{flex-direction:column;}
-    table{display:block; overflow-x:auto; white-space:nowrap;}
-    th, td{padding:8px; font-size:14px;}
-    .footer{flex-direction:column; gap:10px;}
-    .btn{width:100%; justify-content:center;}
+
+/* Movil: menos de 600px */
+@media screen and (max-width: 600px) {
+
+    body {
+        padding: 10px;
+    }
+
+    .app {
+        padding: 15px;
+    }
+
+    .controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form {
+        grid-template-columns: 1fr;
+    }
+
+    .form input, .form select, .form button {
+        font-size: 16px;
+        padding: 12px;
+    }
+
+    .summary {
+        flex-direction: column;
+    }
+
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    th, td {
+        padding: 8px;
+        font-size: 14px;
+    }
+
+    .footer {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
 }
-@media screen and (max-width:900px){
-    .form{grid-template-columns:repeat(2,1fr);}
-    .summary{flex-wrap:wrap; gap:10px;}
+
+/* Tablet: menos de 900px */
+@media screen and (max-width: 900px) {
+    .form {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .summary {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
 }
+
+/* Movil: menos de 600px */
+@media screen and (max-width: 600px) {
+
+    .form {
+        grid-template-columns: 1fr; /* 1 columna, todo ocupa el ancho */
+    }
+
+    .form input, .form select, .form button {
+        width: 100%;       /* cada input ocupa todo el ancho disponible */
+        box-sizing: border-box; /* evita desbordes */
+    }
+
+    .form button {
+        grid-column: span 1; /* ocupa toda la columna ahora */
+    }
+}
+
+@media screen and (max-width: 900px) {
+    .form {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+
+
 </style>
 </head>
 
 <body>
+
 <div class="app">
 <h1>Control de Gastos e Ingresos</h1>
 
@@ -210,25 +283,12 @@ IMPORTAR
 </div>
 </div>
 
-<script>
-// 🔹 CONTRASEÑA ÚNICA
-const PASSWORD_APP = "trabajo"; // Cambia esto por la que quieras
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// 🔹 LOGIN
-window.addEventListener("load", () => {
-    const pass = prompt("Introduce la contraseña para acceder:");
-    if(pass !== PASSWORD_APP){
-        alert("Contraseña incorrecta. Acceso denegado.");
-        document.body.innerHTML = "<h1 style='text-align:center;margin-top:50px;'>ACCESO DENEGADO</h1>";
-    } else {
-        iniciarApp(); // Ejecuta la app si la contraseña es correcta
-    }
-});
-
-// 🔹 INICIAR APP
-function iniciarApp(){
-    // FIREBASE CONFIG
-    const firebaseConfig = {
+/* 🔹 TU CONFIGURACIÓN FIREBASE – reemplaza con la tuya */
+const firebaseConfig = {
   apiKey: "AIzaSyBLqXvnSJs6D5I39xkXUMM3v5xQBMk8lTY",
   authDomain: "control-gastos-65500.firebaseapp.com",
   databaseURL: "https://control-gastos-65500-default-rtdb.firebaseio.com",
@@ -237,135 +297,159 @@ function iniciarApp(){
   messagingSenderId: "69402781054",
   appId: "1:69402781054:web:a65b0307b0ac7b88493f2f"
 };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    // VARIABLES
-    const { jsPDF } = window.jspdf;
-    const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-    const mesSel=mes,anioSel=anio;
-    const hoy=new Date();
-    
-    meses.forEach((m,i)=>mesSel.add(new Option(m,i)));
-    for(let y=hoy.getFullYear()-5;y<=hoy.getFullYear()+5;y++) anioSel.add(new Option(y,y));
-    mesSel.value=hoy.getMonth();
-    anioSel.value=hoy.getFullYear();
-    fecha.valueAsDate=hoy;
 
-    // 🔹 DATOS CON BACKUP LOCAL Y FIREBASE
-    function datos(){
-        const backup = JSON.parse(localStorage.getItem("backup_finanzas")) || [];
-        return backup;
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* === Variables y selects === */
+const { jsPDF } = window.jspdf;
+const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const mesSel=mes,anioSel=anio;
+const hoy=new Date();
+
+meses.forEach((m,i)=>mesSel.add(new Option(m,i)));
+for(let y=hoy.getFullYear()-5;y<=hoy.getFullYear()+5;y++)anioSel.add(new Option(y,y));
+mesSel.value=hoy.getMonth();
+anioSel.value=hoy.getFullYear();
+fecha.valueAsDate=hoy;
+
+/* === FUNCIONES FIREBASE === */
+
+// Leer datos UNA sola vez
+async function leerDatos(){
+    try{
+        const snapshot = await get(ref(db, 'finanzas'));
+        const datos = snapshot.val() || [];
+        return datos;
+    }catch(e){
+        console.warn("Firebase no disponible, usando copia local");
+        return JSON.parse(localStorage.getItem("backup_finanzas")) || [];
     }
-    function guardar(d){
-        localStorage.setItem("backup_finanzas", JSON.stringify(d));
-        db.ref("finanzas").set(d); // guarda en Firebase
-    }
+}
 
-    function formatearFechaISOaDMY(f){
-        const [y,m,d]=f.split("-");
-        return `${d}/${m}/${y}`;
-    }
+// Guardar datos
+function guardar(d){
+    set(ref(db, 'finanzas'), d);
+}
 
-    function agregar(){
-        const d=datos();
-        d.push({
-            fecha:fecha.value,
-            tipo:tipo.value,
-            cantidad:+cantidad.value,
-            concepto:concepto.value
-        });
-        guardar(d);
-        cantidad.value="";
-        concepto.value="";
-        cargar();
-    }
+/* === Funciones principales === */
 
-    function eliminar(index){
-        if(!confirm("¿Eliminar este movimiento?")) return;
-        const d=datos();
-        d.splice(index,1);
-        guardar(d);
-        cargar();
-    }
+async function agregar(){
+    const d = await leerDatos();
+    d.push({
+        fecha: fecha.value,
+        tipo: tipo.value,
+        cantidad: +cantidad.value,
+        concepto: concepto.value
+    });
+    guardar(d);
+    cantidad.value="";
+    concepto.value="";
+}
 
-    function cargar(){
-        let i=0,g=0;
-        tabla.innerHTML="";
-        const lista = datos()
-            .filter(m=>{
-                const f=new Date(m.fecha);
-                return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
-            })
-            .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
-        lista.forEach(m=>{
-            const index = datos().indexOf(m);
-            const tr=document.createElement("tr");
-            tr.innerHTML=`
-            <td>${formatearFechaISOaDMY(m.fecha)}</td>
-            <td>${m.concepto}</td>
-            <td class="ingreso">${m.tipo=="ingreso"?m.cantidad.toFixed(2):""}</td>
-            <td class="gasto">${m.tipo=="gasto"?m.cantidad.toFixed(2):""}</td>
-            <td class="delete" onclick="eliminar(${index})">🗑️</td>
-            `;
-            tabla.appendChild(tr);
-            m.tipo=="ingreso"?i+=m.cantidad:g+=m.cantidad;
-        });
-        ingresos.textContent=i.toFixed(2)+" €";
-        gastos.textContent=g.toFixed(2)+" €";
-        saldo.textContent=(i-g).toFixed(2)+" €";
-    }
+async function eliminar(index){
+    if(!confirm("¿Eliminar este movimiento?")) return;
+    const d = await leerDatos();
+    d.splice(index,1);
+    guardar(d);
+}
 
-    // 🔹 CSV y PDF
-    function exportarCSV(){
-        let csv="Fecha;Concepto;Ingreso;Gasto\n";
-        datos().forEach(m=>{
+async function cargar(){
+    const listaCompleta = await leerDatos();
+    let i=0,g=0;
+    tabla.innerHTML="";
+
+    const lista = listaCompleta
+        .filter(m=>{
+            const f=new Date(m.fecha);
+            return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
+        })
+        .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+
+    lista.forEach((m,index)=>{
+        const tr=document.createElement("tr");
+        tr.innerHTML=`
+        <td>${formatearFechaISOaDMY(m.fecha)}</td>
+        <td>${m.concepto}</td>
+        <td class="ingreso">${m.tipo=="ingreso"?m.cantidad.toFixed(2):""}</td>
+        <td class="gasto">${m.tipo=="gasto"?m.cantidad.toFixed(2):""}</td>
+        <td class="delete" onclick="eliminar(${index})">🗑️</td>
+        `;
+        tabla.appendChild(tr);
+        m.tipo=="ingreso"?i+=m.cantidad:g+=m.cantidad;
+    });
+
+    ingresos.textContent=i.toFixed(2)+" €";
+    gastos.textContent=g.toFixed(2)+" €";
+    saldo.textContent=(i-g).toFixed(2)+" €";
+}
+
+/* === CSV y PDF === */
+
+function exportarCSV(){
+    let csv="Fecha;Concepto;Ingreso;Gasto\n";
+    leerDatos().then(datos=>{
+        datos.forEach(m=>{
             csv+=`${m.fecha};${m.concepto};${m.tipo=="ingreso"?m.cantidad:""};${m.tipo=="gasto"?m.cantidad:""}\n`;
         });
         descargar(csv,"finanzas.csv","text/csv");
-    }
+    });
+}
 
-    function importarCSV(input){
-        const r=new FileReader();
-        r.onload=e=>{
-            const d=datos();
+function importarCSV(input){
+    const r=new FileReader();
+    r.onload=e=>{
+        leerDatos().then(d=>{
             e.target.result.split("\n").slice(1).forEach(l=>{
-                if(!l.trim()) return;
+                if(!l.trim())return;
                 const [f,c,i,g]=l.split(";");
                 d.push({fecha:f,concepto:c,tipo:i?"ingreso":"gasto",cantidad:+(i||g)});
             });
             guardar(d); cargar();
-        };
-        r.readAsText(input.files[0]);
-    }
+        });
+    };
+    r.readAsText(input.files[0]);
+}
 
-    function generarPDF(){
-        const pdf=new jsPDF("p","mm","a4");
-        let y=20;
-        pdf.setFontSize(16);
-        pdf.setFont("helvetica","bold");
-        pdf.text(`INFORME INGRESOS Y GASTO DEL ${meses[mesSel.value].toUpperCase()} ${anioSel.value}`,105,y,{align:"center"});
-        y+=12;
-        pdf.setFontSize(11);
-        pdf.setFont("helvetica","normal");
-        pdf.text(`Total ingresos: ${ingresos.textContent}`,20,y); y+=6;
-        pdf.text(`Total gastos: ${gastos.textContent}`,20,y); y+=6;
-        pdf.text(`Saldo: ${saldo.textContent}`,20,y);
-        y+=12;
-        pdf.setFont("helvetica","bold");
-        pdf.text("Fecha",20,y); pdf.text("Concepto",50,y);
-        pdf.text("Ingreso",135,y,{align:"right"});
-        pdf.text("Gasto",180,y,{align:"right"});
-        y+=4; pdf.line(20,y,190,y); y+=6;
-        pdf.setFont("helvetica","normal");
-        datos()
+function generarPDF(){
+    const pdf=new jsPDF("p","mm","a4");
+    let y=20;
+
+    pdf.setFontSize(16);
+    pdf.setFont("helvetica","bold");
+    pdf.text(
+        `INFORME INGRESOS Y GASTO DEL ${meses[mesSel.value].toUpperCase()} ${anioSel.value}`,
+        105,y,{align:"center"}
+    );
+
+    y+=12;
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica","normal");
+
+    pdf.text(`Total ingresos: ${ingresos.textContent}`,20,y); y+=6;
+    pdf.text(`Total gastos: ${gastos.textContent}`,20,y); y+=6;
+    pdf.text(`Saldo: ${saldo.textContent}`,20,y);
+
+    y+=12;
+    pdf.setFont("helvetica","bold");
+    pdf.text("Fecha",20,y);
+    pdf.text("Concepto",50,y);
+    pdf.text("Ingreso",135,y,{align:"right"});
+    pdf.text("Gasto",180,y,{align:"right"});
+
+    y+=4; pdf.line(20,y,190,y); y+=6;
+    pdf.setFont("helvetica","normal");
+
+    leerDatos().then(datos=>{
+        datos
           .filter(m=>{
             const f=new Date(m.fecha);
             return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
           })
           .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha))
           .forEach(m=>{
-            if(y>270){pdf.addPage(); y=20;}
+            if(y>270){pdf.addPage();y=20;}
             pdf.text(formatearFechaISOaDMY(m.fecha),20,y);
             pdf.text(m.concepto.substring(0,45),50,y);
             pdf.text(m.tipo=="ingreso"?m.cantidad.toFixed(2):"",135,y,{align:"right"});
@@ -373,27 +457,41 @@ function iniciarApp(){
             y+=6;
           });
         pdf.save(`Informe_${meses[mesSel.value]}_${anioSel.value}.pdf`);
-    }
-
-    function descargar(c,n,t){
-        const a=document.createElement("a");
-        a.href=URL.createObjectURL(new Blob([c],{type:t}));
-        a.download=n;
-        a.click();
-    }
-
-    // 🔹 Iniciar
-    mesSel.onchange=cargar;
-    anioSel.onchange=cargar;
-    cargar();
-
-    // 🔹 Exponer funciones globales para botones
-    window.agregar = agregar;
-    window.eliminar = eliminar;
-    window.exportarCSV = exportarCSV;
-    window.importarCSV = importarCSV;
-    window.generarPDF = generarPDF;
+    });
 }
+
+/* === Helper === */
+function formatearFechaISOaDMY(f){
+    const [y,m,d]=f.split("-");
+    return `${d}/${m}/${y}`;
+}
+
+function descargar(c,n,t){
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([c],{type:t}));
+    a.download=n;
+    a.click();
+}
+
+mesSel.onchange=cargar;
+anioSel.onchange=cargar;
+
+/* === Exponer funciones para HTML === */
+window.agregar = agregar;
+window.eliminar = eliminar;
+window.exportarCSV = exportarCSV;
+window.importarCSV = importarCSV;
+window.generarPDF = generarPDF;
+
+/* === Listener único para evitar duplicados === */
+onValue(ref(db, 'finanzas'), async () => {
+    const datos = await leerDatos();
+    localStorage.setItem("backup_finanzas", JSON.stringify(datos));
+    cargar();
+});
+
+cargar();
 </script>
+
 </body>
 </html>
