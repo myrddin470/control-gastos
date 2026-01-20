@@ -229,8 +229,14 @@ fecha.valueAsDate=hoy;
 
 // Leer datos UNA sola vez
 async function leerDatos(){
-    const snapshot = await get(ref(db, 'finanzas'));
-    return snapshot.val() || [];
+    try{
+        const snapshot = await get(ref(db, 'finanzas'));
+        const datos = snapshot.val() || [];
+        return datos;
+    }catch(e){
+        console.warn("Firebase no disponible, usando copia local");
+        return JSON.parse(localStorage.getItem("backup_finanzas")) || [];
+    }
 }
 
 // Guardar datos
@@ -389,7 +395,9 @@ window.importarCSV = importarCSV;
 window.generarPDF = generarPDF;
 
 /* === Listener único para evitar duplicados === */
-onValue(ref(db, 'finanzas'), () => {
+onValue(ref(db, 'finanzas'), async () => {
+    const datos = await leerDatos();
+    localStorage.setItem("backup_finanzas", JSON.stringify(datos));
     cargar();
 });
 
