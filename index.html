@@ -284,27 +284,6 @@ IMPORTAR
 </div>
 
 <script type="module">
-
-// Contraseña única para la app
-const PASSWORD_APP = "trabajo"; // Cambia esto por la que quieras
-
-
-
-window.addEventListener("load", () => {
-    const pass = prompt("Introduce la contraseña para acceder:");
-    if(pass !== PASSWORD_APP){
-        alert("Contraseña incorrecta. Acceso denegado.");
-        document.body.innerHTML = "<h1 style='text-align:center;margin-top:50px;'>ACCESO DENEGADO</h1>";
-    } else {
-        // Todo tu código original se ejecuta dentro de esta función
-        iniciarApp(); 
-    }
-});
-
-
-
-
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -324,9 +303,6 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 /* === Variables y selects === */
-
-function iniciarApp() {
-
 const { jsPDF } = window.jspdf;
 const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const mesSel=mes,anioSel=anio;
@@ -512,7 +488,6 @@ onValue(ref(db, 'finanzas'), async () => {
     const datos = await leerDatos();
     localStorage.setItem("backup_finanzas", JSON.stringify(datos));
     cargar();
-}
 });
 
 cargar();
