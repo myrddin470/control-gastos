@@ -139,6 +139,70 @@ td.gasto{color:#e74c3c;font-weight:600}
 }
 .btn-report:hover{background:#2980b9}
 input[type="file"]{display:none}
+
+
+/* Movil: menos de 600px */
+@media screen and (max-width: 600px) {
+
+    body {
+        padding: 10px;
+    }
+
+    .app {
+        padding: 15px;
+    }
+
+    .controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form {
+        grid-template-columns: 1fr;
+    }
+
+    .form input, .form select, .form button {
+        font-size: 16px;
+        padding: 12px;
+    }
+
+    .summary {
+        flex-direction: column;
+    }
+
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    th, td {
+        padding: 8px;
+        font-size: 14px;
+    }
+
+    .footer {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Tablet: menos de 900px */
+@media screen and (max-width: 900px) {
+    .form {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .summary {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+}
+
 </style>
 </head>
 
