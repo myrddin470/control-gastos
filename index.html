@@ -303,9 +303,17 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 const auth = firebase.auth();
 
-const db = firebase.database();
+auth.onAuthStateChanged(user => {
+  if (user) {
+    console.log('✅ Usuario autenticado:', user.email);
+  } else {
+    console.log('❌ Usuario NO autenticado');
+  }
+});
+
 
 
 /* === Variables y selects === */
