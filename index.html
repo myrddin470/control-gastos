@@ -498,7 +498,7 @@ window.importarCSV = importarCSV;
 window.generarPDF = generarPDF;
 
 /* === Listener único para evitar duplicados === */
-onValue(ref(db, 'finanzas'), async () => {
+firebase.database().ref('finanzas').on('value', async snapshot => {
     const datos = await leerDatos();
     localStorage.setItem("backup_finanzas", JSON.stringify(datos));
     cargar();
