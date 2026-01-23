@@ -15,6 +15,17 @@ body{
     margin:0;
     padding:20px;
     color:#333;
+
+
+
+
+
+
+
+
+
+
+
 }
 .app{
     max-width:1100px;
@@ -233,7 +244,30 @@ input[type="file"]{display:none}
 
 <body>
 
-<div class="app">
+    <!-- BLOQUE LOGIN -->
+<div id="login" style="text-align:center; margin:50px auto; max-width:300px;">
+  <h2>Acceso Control de Gastos</h2>
+  <input type="email" id="loginEmail" placeholder="Email" style="width:100%; padding:10px; margin:5px 0; border-radius:8px; border:1px solid #ccc;">
+  <input type="password" id="loginPassword" placeholder="Contraseña" style="width:100%; padding:10px; margin:5px 0; border-radius:8px; border:1px solid #ccc;">
+  <button id="btnLogin" style="width:100%; padding:10px; margin-top:10px; border:none; border-radius:8px; background:#3498db; color:white; cursor:pointer;">Entrar</button>
+  <p id="loginError" style="color:red; font-size:14px; margin-top:5px;"></p>
+</div>
+
+
+<!-- LOGIN -->
+<div id="loginDiv" style="display:flex;position:fixed;inset:0;align-items:center;justify-content:center;background:#f0f0f0;z-index:1000;">
+  <div style="background:white;padding:20px;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.2);width:300px;text-align:center;">
+    <h2 style="margin-bottom:15px;">Acceso</h2>
+    <input id="inputEmail" type="email" placeholder="Email" style="width:100%;padding:8px;margin-bottom:10px;border-radius:6px;border:1px solid #ccc;">
+    <input id="inputPass" type="password" placeholder="Contraseña" style="width:100%;padding:8px;margin-bottom:10px;border-radius:6px;border:1px solid #ccc;">
+    <button id="btnLogin" style="width:100%;padding:10px;border:none;border-radius:6px;background:#3498db;color:white;font-weight:600;cursor:pointer;">Entrar</button>
+    <p id="loginError" style="color:red;font-size:12px;margin-top:10px;display:none;">Credenciales incorrectas</p>
+  </div>
+</div>
+
+
+
+<div class="app" style="display:none;">
 <h1>Control de Gastos e Ingresos</h1>
 
 <div class="controls">
@@ -306,13 +340,83 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
+// 🔹 Crear usuario único (solo la primera vez)
+const emailAdmin = "ordassuarez@gmail.com";      // tu email
+const passwordAdmin = "trabajo";                // tu contraseña
+
+auth.signInWithEmailAndPassword(emailAdmin, passwordAdmin)
+  .catch((error) => {
+    if (error.code === "auth/user-not-found") {
+      // Si no existe el usuario, lo crea
+      auth.createUserWithEmailAndPassword(emailAdmin, passwordAdmin)
+        .then(() => console.log("✅ Usuario ADMIN creado"))
+        .catch(err => console.error("❌ Error creando usuario ADMIN:", err.message));
+    } else {
+      console.error("❌ Error login ADMIN:", error.message);
+    }
+  });
+
+
+auth.onAuthStateChanged(user => {
+  const appDiv = document.querySelector('.app');
+  const loginDiv = document.getElementById('login');
+
+  if (user) {
+    console.log('✅ Usuario autenticado:', user.email);
+    loginDiv.style.display = 'none';
+    appDiv.style.display = 'block';
+    cargar(); // carga tus datos al iniciar
+  } else {
+    console.log('❌ Usuario NO autenticado');
+    loginDiv.style.display = 'block';
+    appDiv.style.display = 'none';
+  }
+});
+
+
 auth.onAuthStateChanged(user => {
   if (user) {
     console.log('✅ Usuario autenticado:', user.email);
+    document.querySelector('.app').style.display = 'block';
+    document.getElementById('login').style.display = 'none';
+    cargar();
   } else {
     console.log('❌ Usuario NO autenticado');
+    document.querySelector('.app').style.display = 'none';
+    document.getElementById('login').style.display = 'block';
   }
 });
+
+// --- Bloque login con inputs ---
+const loginDiv = document.getElementById('login');
+const loginEmail = document.getElementById('loginEmail');
+const loginPassword = document.getElementById('loginPassword');
+const btnLogin = document.getElementById('btnLogin');
+const loginError = document.getElementById('loginError');
+const appDiv = document.querySelector('.app');
+
+btnLogin.onclick = async () => {
+  const email = loginEmail.value.trim();
+  const password = loginPassword.value.trim();
+
+  if (!email || !password) {
+    loginError.textContent = 'Debes ingresar email y contraseña.';
+    return;
+  }
+
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    loginError.textContent = '';
+    loginDiv.style.display = 'none';
+    appDiv.style.display = 'block';
+    cargar();
+  } catch (error) {
+    console.error(error);
+    loginError.textContent = 'Email o contraseña incorrectos.';
+  }
+};
+
+
 
 
 
