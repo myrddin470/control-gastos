@@ -95,8 +95,26 @@ th,td{
     border-bottom:1px solid #e1e4e8;
 }
 th{background:#f1f3f5}
-td.ingreso{color:#2ecc71;font-weight:600}
-td.gasto{color:#e74c3c;font-weight:600}
+td.ingreso {
+    color: #2ecc71;
+    font-weight: 600;
+    text-align: right; /* ✅ alinea al final */
+}
+
+td.gasto {
+    color: #e74c3c;
+    font-weight: 600;
+    text-align: right; /* ✅ alinea al final */
+}
+
+th:nth-child(3), th:nth-child(4) {
+    text-align: right;
+}
+
+th:nth-child(1),
+th:nth-child(2) {
+    text-align: left;
+}
 
 .delete{
     cursor:pointer;
@@ -211,8 +229,8 @@ input[type="file"]{display:none}
 <tr>
 <th>Fecha</th>
 <th>Concepto</th>
-<th>Ingreso</th>
-<th>Gasto</th>
+<th>Ingresos</th>
+<th>Gastos</th>
 <th></th>
 </tr>
 </thead>
