@@ -326,6 +326,7 @@ function guardar(d){
 async function agregar(){
     const d = await leerDatos();
     d.push({
+        id: Date.now(), // ✅ ID ÚNICO
         fecha: fecha.value,
         tipo: tipo.value,
         cantidad: +cantidad.value,
@@ -333,21 +334,23 @@ async function agregar(){
     });
     guardar(d);
 
-    // ✅ LIMPIA LOS INPUTS DE IMPORTE Y CONCEPTO
     cantidad.value = '';
     concepto.value = '';
-    fecha.valueAsDate = new Date(); // opcional: reset fecha a hoy
+    fecha.valueAsDate = new Date();
 
     cargar();
 }
 
-async function eliminar(index){
+
+async function eliminar(id){
     if(!confirm("¿Eliminar este movimiento?")) return;
+
     const d = await leerDatos();
-    d.splice(index,1);
-    guardar(d);
+    const nuevos = d.filter(m => m.id !== id); // ✅ Filtra por id
+    guardar(nuevos);
     cargar();
 }
+
 
 async function cargar(){
     const listaCompleta = await leerDatos();
@@ -365,7 +368,7 @@ async function cargar(){
         <td>${m.concepto}</td>
         <td class="ingreso">${m.tipo=="ingreso"?m.cantidad.toFixed(2):""}</td>
         <td class="gasto">${m.tipo=="gasto"?m.cantidad.toFixed(2):""}</td>
-        <td class="delete" onclick="eliminar(${index})">🗑️</td>
+        <td class="delete" onclick="eliminar(${m.id})">🗑️</td>
         `;
         tabla.appendChild(tr);
         m.tipo=="ingreso"?i+=m.cantidad:g+=m.cantidad;
@@ -394,7 +397,16 @@ function importarCSV(input){
             e.target.result.split("\n").slice(1).forEach(l=>{
                 if(!l.trim())return;
                 const [f,c,i,g]=l.split(";");
-                d.push({fecha:f,concepto:c,tipo:i?"ingreso":"gasto",cantidad:+(i||g)});
+                
+d.push({
+  id: Date.now() + Math.floor(Math.random()*1000), // id único
+  fecha: f,
+  concepto: c,
+  tipo: i ? "ingreso" : "gasto",
+  cantidad: +(i || g)
+});
+
+
             });
             guardar(d); cargar();
         });
