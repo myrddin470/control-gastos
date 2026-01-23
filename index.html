@@ -391,28 +391,36 @@ function exportarCSV(){
 }
 
 function importarCSV(input){
-    const r=new FileReader();
-    r.onload=e=>{
-        leerDatos().then(d=>{
-            e.target.result.split("\n").slice(1).forEach(l=>{
-                if(!l.trim())return;
-                const [f,c,i,g]=l.split(";");
-                
-d.push({
-  id: Date.now() + Math.floor(Math.random()*1000), // id único
-  fecha: f,
-  concepto: c,
-  tipo: i ? "ingreso" : "gasto",
-  cantidad: +(i || g)
-});
+    const r = new FileReader();
+    r.onload = async e => {
+        const lineas = e.target.result.split("\n").slice(1); // omite header
+        const nuevasFilas = [];
 
-
+        lineas.forEach(l => {
+            if(!l.trim()) return;
+            const [f,c,i,g] = l.split(";");
+            nuevasFilas.push({
+                id: Date.now() + Math.random(), // ID único
+                fecha: f,
+                concepto: c,
+                tipo: i ? "ingreso" : "gasto",
+                cantidad: +(i || g)
             });
-            guardar(d); cargar();
         });
+
+        // ❗ Guardamos un array completo en Firebase
+        try {
+            await firebase.database().ref('finanzas').set(nuevasFilas);
+            localStorage.setItem("backup_finanzas", JSON.stringify(nuevasFilas)); // backup
+            cargar();
+        } catch(err) {
+            console.error("Error al importar CSV:", err);
+            alert("No se pudo importar el CSV");
+        }
     };
     r.readAsText(input.files[0]);
 }
+
 
 function generarPDF(){
     const pdf=new jsPDF("p","mm","a4");
