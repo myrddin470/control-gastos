@@ -250,10 +250,7 @@ input[type="file"]{display:none}
   <input type="email" id="loginEmail" placeholder="Email" style="width:100%; padding:10px; margin:5px 0; border-radius:8px; border:1px solid #ccc;">
   <input type="password" id="loginPassword" placeholder="Contraseña" style="width:100%; padding:10px; margin:5px 0; border-radius:8px; border:1px solid #ccc;">
  
-<button id="btnLogin" type="button"
-  style="width:100%; padding:10px; margin-top:10px; border:none; border-radius:8px; background:#3498db; color:white; cursor:pointer;">
-  Entrar
-</button>
+
 
 
 
@@ -267,7 +264,15 @@ input[type="file"]{display:none}
     <h2 style="margin-bottom:15px;">Acceso</h2>
     <input id="inputEmail" type="email" placeholder="Email" style="width:100%;padding:8px;margin-bottom:10px;border-radius:6px;border:1px solid #ccc;">
     <input id="inputPass" type="password" placeholder="Contraseña" style="width:100%;padding:8px;margin-bottom:10px;border-radius:6px;border:1px solid #ccc;">
-    <button id="btnLogin" style="width:100%;padding:10px;border:none;border-radius:6px;background:#3498db;color:white;font-weight:600;cursor:pointer;">Entrar</button>
+
+<button id="btnLogin" type="button"
+  onclick="hacerLogin()"
+  style="width:100%; padding:10px; margin-top:10px; border:none; border-radius:8px; background:#3498db; color:white; cursor:pointer;">
+  Entrar
+</button>
+    
+
+    
     <p id="loginError" style="color:red;font-size:12px;margin-top:10px;display:none;">Credenciales incorrectas</p>
   </div>
 </div>
@@ -379,6 +384,28 @@ auth.onAuthStateChanged(user => {
     appDiv.style.display = 'none';
   }
 });
+
+
+function hacerLogin() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+
+  if (!email || !password) {
+    alert("Introduce usuario y contraseña");
+    return;
+  }
+
+  auth.signInWithEmailAndPassword(email, password)
+    .then(() => {
+      console.log("✅ Login correcto");
+    })
+    .catch(error => {
+      console.error(error);
+      alert("❌ Usuario o contraseña incorrectos");
+    });
+}
+
+
 
 
 
@@ -605,6 +632,9 @@ firebase.database().ref('finanzas').on('value', async snapshot => {
 
 cargar();
 </script>
+
+
+
 
 </body>
 </html>
