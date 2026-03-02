@@ -246,6 +246,11 @@ IMPORTAR
 <button class="btn btn-export" onclick="exportarCSV()">EXPORTAR</button>
 </div>
 <button class="btn btn-report" onclick="generarPDF()">INFORME</button>
+
+<button class="btn btn-report" onclick="abrirModalSaldo()" style="background:#8e44ad;box-shadow:0 6px 18px rgba(142,68,173,.35);">
+SALDO ANUAL
+</button>
+
 </div>
 </div>
 
@@ -253,6 +258,71 @@ IMPORTAR
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<!-- MODAL SALDO ANUAL -->
+<div id="modalSaldo" style="
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.6);
+z-index:2000;
+align-items:center;
+justify-content:center;
+">
+  <div style="
+  background:white;
+  width:400px;
+  max-width:90%;
+  padding:30px;
+  border-radius:14px;
+  box-shadow:0 20px 50px rgba(0,0,0,.3);
+  text-align:center;
+  position:relative;
+  ">
+
+    <h2 style="margin-top:0;color:#8e44ad;">Saldo acumulado anual</h2>
+
+    <select id="anioSaldo" style="
+    width:100%;
+    padding:10px;
+    margin:15px 0;
+    border-radius:8px;
+    border:1px solid #ccc;
+    font-size:16px;
+    ">
+    </select>
+
+    <div id="resultadoSaldo" style="
+    margin-top:20px;
+    font-size:26px;
+    font-weight:700;
+    color:#2c3e50;
+    ">
+    0 €
+    </div>
+
+    <button onclick="cerrarModalSaldo()" style="
+    margin-top:25px;
+    background:#e74c3c;
+    color:white;
+    border:none;
+    padding:10px 18px;
+    border-radius:8px;
+    cursor:pointer;
+    ">
+    Cerrar
+    </button>
+
+  </div>
+</div>
+
+
+
+
+
+
+
+
 
 <script>
 /* 🔹 CONFIG FIREBASE */
@@ -500,6 +570,78 @@ firebase.database().ref('finanzas').on('value', async snapshot => {
 });
 
 cargar();
+
+
+
+/* === SALDO ACUMULADO ANUAL === */
+
+const modalSaldo = document.getElementById("modalSaldo");
+const anioSaldo = document.getElementById("anioSaldo");
+const resultadoSaldo = document.getElementById("resultadoSaldo");
+
+function abrirModalSaldo(){
+    modalSaldo.style.display = "flex";
+    cargarAniosSaldo();
+    calcularSaldoAnual();
+}
+
+function cerrarModalSaldo(){
+    modalSaldo.style.display = "none";
+}
+
+async function cargarAniosSaldo(){
+    const datos = await leerDatos();
+    const anios = [...new Set(
+        datos.map(m => new Date(m.fecha).getFullYear())
+    )].sort((a,b)=>b-a);
+
+    anioSaldo.innerHTML = "";
+
+    anios.forEach(a=>{
+        const option = document.createElement("option");
+        option.value = a;
+        option.textContent = a;
+        anioSaldo.appendChild(option);
+    });
+
+    if(anios.length){
+        anioSaldo.value = anios[0];
+    }
+
+    anioSaldo.onchange = calcularSaldoAnual;
+}
+
+async function calcularSaldoAnual(){
+    const datos = await leerDatos();
+    const anio = parseInt(anioSaldo.value);
+
+    let ingresosTotal = 0;
+    let gastosTotal = 0;
+
+    datos.forEach(m=>{
+        const f = new Date(m.fecha);
+        if(f.getFullYear() === anio){
+            if(m.tipo === "ingreso") ingresosTotal += m.cantidad;
+            if(m.tipo === "gasto") gastosTotal += m.cantidad;
+        }
+    });
+
+    const saldo = ingresosTotal - gastosTotal;
+
+    resultadoSaldo.textContent = saldo.toFixed(2) + " €";
+
+    if(saldo >= 0){
+        resultadoSaldo.style.color = "#27ae60";
+    } else {
+        resultadoSaldo.style.color = "#e74c3c";
+    }
+}
+
+
+
+
+
+
 </script>
 
 </body>
