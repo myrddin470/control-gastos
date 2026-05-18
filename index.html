@@ -337,16 +337,17 @@ justify-content:center;
 
 <script>
 /* 🔹 CONFIG FIREBASE */
+/* 🔹 CONFIG FIREBASE */
 const firebaseConfig = {
   apiKey: "AIzaSyBLqXvnSJs6D5I39xkXUMM3v5xQBMk8lTY",
   authDomain: "control-gastos-65500.firebaseapp.com",
-  databaseURL: "https://control-gastos-65500-default-rtdb.firebaseio.com",
+  // Pega esta URL exacta que apunta a tu base de datos de Europa:
+  databaseURL: "https://control-gastos-65500-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "control-gastos-65500",
   storageBucket: "control-gastos-65500.firebasestorage.app",
   messagingSenderId: "69402781054",
   appId: "1:69402781054:web:a65b0307b0ac7b88493f2f"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
@@ -372,15 +373,14 @@ btnLogin.onclick = async () => {
   }
 
  
-  
 
   try {
     await auth.signInWithEmailAndPassword(email, password);
     loginError.style.display = "none";
-  } catch (error) {
+} catch (error) {
     console.error(error);
     loginError.style.display = "block";
-    loginError.textContent = 'Email o contraseña incorrectos.';
+    loginError.textContent = 'Error real: ' + error.code;
   }
 };
 
