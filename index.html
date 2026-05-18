@@ -173,6 +173,14 @@ th:nth-child(2) {
 .btn-report:hover{background:#2980b9}
 input[type="file"]{display:none}
 
+/* Estilo para el botón de cerrar sesión */
+.btn-logout {
+    background:#e74c3c;
+    color:white;
+    margin-left: 10px;
+}
+.btn-logout:hover{background:#c0392b}
+
 /* === Responsive === */
 @media screen and (max-width: 900px){
     .form {grid-template-columns:repeat(2,1fr);}
@@ -262,6 +270,8 @@ IMPORTAR
 SALDO ANUAL
 </button>
 
+<button class="btn btn-logout" onclick="cerrarSesion()">SALIR</button>
+
 </div>
 </div>
 
@@ -341,6 +351,8 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
+let currentUserUid = "";
+
 /* === LOGIN === */
 const loginDiv = document.getElementById('loginDiv');
 const loginEmail = document.getElementById('loginEmail');
@@ -350,7 +362,7 @@ const loginError = document.getElementById('loginError');
 const appDiv = document.querySelector('.app');
 
 btnLogin.onclick = async () => {
-  const email = loginEmail.value.trim();
+  let email = loginEmail.value.trim();
   const password = loginPassword.value.trim();
 
   if (!email || !password) {
@@ -359,12 +371,13 @@ btnLogin.onclick = async () => {
     return;
   }
 
+  if (!email.includes('@')) {
+    email += '@correo.com';
+  }
+
   try {
     await auth.signInWithEmailAndPassword(email, password);
     loginError.style.display = "none";
-    loginDiv.style.display = 'none';
-    appDiv.style.display = 'block';
-    cargar();
   } catch (error) {
     console.error(error);
     loginError.style.display = "block";
@@ -374,14 +387,26 @@ btnLogin.onclick = async () => {
 
 auth.onAuthStateChanged(user => {
   if (user) {
+    currentUserUid = user.uid;
     loginDiv.style.display = 'none';
     appDiv.style.display = 'block';
-    cargar();
+    
+    // Escuchar cambios en tiempo real en la subcarpeta del usuario autenticado
+    db.ref('usuarios/' + currentUserUid + '/finanzas').on('value', snapshot => {
+        const datos = snapshot.val() || [];
+        localStorage.setItem("backup_finanzas", JSON.stringify(datos));
+        cargar();
+    });
   } else {
+    currentUserUid = "";
     loginDiv.style.display = 'flex';
     appDiv.style.display = 'none';
   }
 });
+
+function cerrarSesion() {
+    auth.signOut();
+}
 
 /* === Variables y selects === */
 const { jsPDF } = window.jspdf;
@@ -389,16 +414,20 @@ const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","
 const mesSel=mes,anioSel=anio;
 const hoy=new Date();
 
-meses.forEach((m,i)=>mesSel.add(new Option(m,i)));
-for(let y=hoy.getFullYear()-5;y<=hoy.getFullYear()+5;y++)anioSel.add(new Option(y,y));
+// Evitamos duplicar opciones si ya existen
+if(mesSel.options.length === 0) {
+    meses.forEach((m,i)=>mesSel.add(new Option(m,i)));
+    for(let y=hoy.getFullYear()-5;y<=hoy.getFullYear()+5;y++)anioSel.add(new Option(y,y));
+}
 mesSel.value=hoy.getMonth();
 anioSel.value=hoy.getFullYear();
 fecha.valueAsDate=hoy;
 
-/* === FUNCIONES FIREBASE === */
+/* === FUNCIONES FIREBASE PROTEGIDAS === */
 async function leerDatos(){
+    if(!currentUserUid) return [];
     try{
-        const snapshot = await firebase.database().ref('finanzas').once('value');
+        const snapshot = await db.ref('usuarios/' + currentUserUid + '/finanzas').once('value');
         return snapshot.val() || [];
     }catch(e){
         console.warn("Firebase no disponible, usando copia local");
@@ -407,7 +436,8 @@ async function leerDatos(){
 }
 
 function guardar(d){
-    firebase.database().ref('finanzas').set(d);
+    if(!currentUserUid) return;
+    db.ref('usuarios/' + currentUserUid + '/finanzas').set(d);
 }
 
 /* === Funciones principales === */
@@ -425,8 +455,6 @@ async function agregar(){
     cantidad.value = '';
     concepto.value = '';
     fecha.valueAsDate = new Date();
-
-    cargar();
 }
 
 async function eliminar(id){
@@ -435,7 +463,6 @@ async function eliminar(id){
     const d = await leerDatos();
     const nuevos = d.filter(m => m.id !== id);
     guardar(nuevos);
-    cargar();
 }
 
 async function cargar(){
@@ -444,10 +471,14 @@ async function cargar(){
     tabla.innerHTML="";
 
     const lista = listaCompleta
-        .filter(m=>{const f=new Date(m.fecha);return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;})
+        .filter(m=>{
+            if(!m || !m.fecha) return false;
+            const f=new Date(m.fecha);
+            return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
+        })
         .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
 
-    lista.forEach((m,index)=>{
+    lista.forEach((m)=>{
         const tr=document.createElement("tr");
         tr.innerHTML=`
         <td>${formatearFechaISOaDMY(m.fecha)}</td>
@@ -495,9 +526,7 @@ function importarCSV(input){
         });
 
         try {
-            await firebase.database().ref('finanzas').set(nuevasFilas);
-            localStorage.setItem("backup_finanzas", JSON.stringify(nuevasFilas));
-            cargar();
+            guardar(nuevasFilas);
         } catch(err) {
             console.error("Error al importar CSV:", err);
             alert("No se pudo importar el CSV");
@@ -522,7 +551,11 @@ function generarPDF(){
     pdf.text("Ingreso",135,y,{align:"right"}); pdf.text("Gasto",180,y,{align:"right"});
     y+=4; pdf.line(20,y,190,y); y+=6; pdf.setFont("helvetica","normal");
     leerDatos().then(datos=>{
-        datos.filter(m=>{const f=new Date(m.fecha);return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;})
+        datos.filter(m=>{
+            if(!m || !m.fecha) return false;
+            const f=new Date(m.fecha);
+            return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
+        })
         .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha))
         .forEach(m=>{
             if(y>270){pdf.addPage();y=20;}
@@ -538,11 +571,11 @@ function generarPDF(){
 
 /* === Helpers === */
 function formatearFechaISOaDMY(f){
+    if(!f) return "";
     const [y,m,d]=f.split("-");
     return `${d}/${m}/${y}`;
 }
 
-// NUEVA FUNCIÓN INMUNE A FALLOS: Fuerza comas para decimales y puntos para millares
 function formatearNumero(num) {
     if (isNaN(num) || num === null || num === undefined) return "0,00";
     let numeroFijo = Number(num).toFixed(2);
@@ -567,35 +600,29 @@ window.eliminar=eliminar;
 window.exportarCSV=exportarCSV;
 window.importarCSV=importarCSV;
 window.generarPDF=generarPDF;
-
-/* === Listener Firebase real-time === */
-firebase.database().ref('finanzas').on('value', async snapshot => {
-    const datos = await leerDatos();
-    localStorage.setItem("backup_finanzas", JSON.stringify(datos));
-    cargar();
-});
-
-cargar();
+window.cerrarSesion=cerrarSesion;
 
 /* === SALDO ACUMULADO ANUAL === */
 const modalSaldo = document.getElementById("modalSaldo");
 const anioSaldo = document.getElementById("anioSaldo");
 const resultadoSaldo = document.getElementById("resultadoSaldo");
 
-function abrirModalSaldo(){
+window.abrirModalSaldo = function(){
     modalSaldo.style.display = "flex";
     cargarAniosSaldo();
-    calcularSaldoAnual();
-}
+};
 
-function cerrarModalSaldo(){
+window.cerrarModalSaldo = function(){
     modalSaldo.style.display = "none";
-}
+};
 
 async function cargarAniosSaldo(){
     const datos = await leerDatos();
     const anios = [...new Set(
-        datos.map(m => new Date(m.fecha).getFullYear())
+        datos.map(m => {
+            if(!m || !m.fecha) return new Date().getFullYear();
+            return new Date(m.fecha).getFullYear();
+        })
     )].sort((a,b)=>b-a);
 
     anioSaldo.innerHTML = "";
@@ -612,6 +639,7 @@ async function cargarAniosSaldo(){
     }
 
     anioSaldo.onchange = calcularSaldoAnual;
+    calcularSaldoAnual();
 }
 
 async function calcularSaldoAnual(){
@@ -622,6 +650,7 @@ async function calcularSaldoAnual(){
     let gastosTotal = 0;
 
     datos.forEach(m=>{
+        if(!m || !m.fecha) return;
         const f = new Date(m.fecha);
         if(f.getFullYear() === anio){
             if(m.tipo === "ingreso") ingresosTotal += m.cantidad;
@@ -630,7 +659,6 @@ async function calcularSaldoAnual(){
     });
 
     const saldo = ingresosTotal - gastosTotal;
-
     resultadoSaldo.textContent = formatearNumero(saldo) + " €";
 
     if(saldo >= 0){
