@@ -371,9 +371,8 @@ btnLogin.onclick = async () => {
     return;
   }
 
-  if (!email.includes('@')) {
-    email += '@correo.com';
-  }
+ 
+  
 
   try {
     await auth.signInWithEmailAndPassword(email, password);
