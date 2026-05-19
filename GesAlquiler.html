@@ -5,13 +5,13 @@
 <title>Control de Gastos e Ingresos JCOS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="icon" type="image/png" href="favicon2.png" sizes="32x32">
-<link rel="icon" type="image/png" href="icon-desktop2.png" sizes="192x192">
-<link rel="apple-touch-icon" href="icon-desktop2.png">
+<link rel="icon" type="image/png" href="favicon.png" sizes="32x32">
+<link rel="icon" type="image/png" href="icon-desktop.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icon-desktop.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -45,6 +45,7 @@ body {
 .dashboard-container {
     display: flex;
     min-height: 100vh;
+    width: 100%;
 }
 
 .app {
@@ -53,6 +54,8 @@ body {
     margin: 0 auto;
     padding: 40px 20px;
     display: none; /* Oculto hasta login */
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Header de la App */
@@ -63,6 +66,7 @@ body {
     margin-bottom: 32px;
     border-bottom: 1px solid var(--border);
     padding-bottom: 20px;
+    gap: 16px;
 }
 
 h1 {
@@ -80,6 +84,7 @@ h1 .copyright {
     padding: 2px 8px;
     border-radius: 6px;
     margin-left: 8px;
+    display: inline-block;
 }
 
 /* Selector de Año Estilizado y Más Visible (SaaS Style) */
@@ -89,20 +94,20 @@ h1 .copyright {
 }
 
 .controls select {
-    padding: 12px 40px 12px 20px; /* Más espacio para que respire */
-    font-size: 18px;              /* Texto notablemente más grande */
-    font-weight: 600;             /* Fuente semibold para mayor presencia */
+    padding: 12px 40px 12px 20px; 
+    font-size: 18px;              
+    font-weight: 600;             
     border-radius: 10px;
-    border: 2px solid var(--border); /* Borde un poco más definido */
+    border: 2px solid var(--border); 
     background: var(--bg-card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E") no-repeat;
     background-position: right 14px center;
-    background-size: 16px;        /* Icono de flecha personalizado */
-    color: var(--primary);        /* El texto del año ahora usa el color corporativo */
+    background-size: 16px;        
+    color: var(--primary);        
     cursor: pointer;
     outline: none;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    -webkit-appearance: none;     /* Oculta la flecha nativa de los navegadores */
+    -webkit-appearance: none;     
     -moz-appearance: none;
     appearance: none;
 }
@@ -173,6 +178,8 @@ h1 .copyright {
     color: var(--text-main);
     outline: none;
     transition: all 0.2s;
+    box-sizing: border-box;
+    width: 100%;
 }
 .form input:focus, .form select:focus {
     border-color: var(--primary);
@@ -186,6 +193,7 @@ h1 .copyright {
     font-weight: 600;
     cursor: pointer;
     transition: background 0.2s;
+    width: 100%;
 }
 .form button:hover { background: var(--primary-hover); }
 
@@ -238,10 +246,12 @@ th:nth-child(3), th:nth-child(4) { text-align: right; }
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 20px;
 }
 .actions {
     display: flex;
     gap: 12px;
+    flex-wrap: wrap;
 }
 .btn {
     display: inline-flex;
@@ -255,6 +265,7 @@ th:nth-child(3), th:nth-child(4) { text-align: right; }
     cursor: pointer;
     border: 1px solid transparent;
     transition: all 0.2s;
+    box-sizing: border-box;
 }
 .btn-import { background: #fff; color: var(--text-main); border-color: var(--border); }
 .btn-import:hover { background: #f8fafc; border-color: #cbd5e1; }
@@ -281,14 +292,18 @@ input[type="file"] { display: none; }
     justify-content: center;
     background: #0f172a;
     z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
 }
 .login-card {
     background: white;
-    padding: 40px;
+    padding: 40px 30px;
     border-radius: 16px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    width: 340px;
+    width: 100%;
+    max-width: 340px;
     text-align: center;
+    box-sizing: border-box;
 }
 .login-card h2 {
     margin: 0 0 8px 0;
@@ -326,30 +341,87 @@ input[type="file"] { display: none; }
 }
 .login-card button:hover { background: var(--primary-hover); }
 
-/* === Responsive === */
-@media screen and (max-width: 1000px) {
-    .form { grid-template-columns: repeat(2, 1fr); }
-    .form button { grid-column: span 2; }
-    .summary { grid-template-columns: 1fr; gap: 12px; }
+/* =========================================================
+   === RESPONSIVE DESIGN TOTAL (TABLETS Y MÓVILES) ===
+   ========================================================= */
+
+/* --- TABLETS (Pantallas menores de 1024px) --- */
+@media screen and (max-width: 1024px) {
+    .app { padding: 24px 16px; }
+    
+    /* Formulario adaptado a rejilla intermedia */
+    .form { 
+        grid-template-columns: repeat(3, 1fr); 
+        gap: 12px;
+    }
+    /* El concepto y el botón toman mejor posicionamiento */
+    #concepto { grid-column: span 2; }
+    .form button { grid-column: span 1; }
 }
-@media screen and (max-width: 600px) {
+
+/* --- MÓVILES (Pantallas menores de 768px) --- */
+@media screen and (max-width: 768px) {
     .header-app { 
-        flex-direction: row;       
-        justify-content: space-between;
-        align-items: center; 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 16px; 
+    }
+    
+    .controls {
+        width: 100%;
+    }
+    .controls select {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Las tarjetas de resumen pasan a apilarse verticalmente */
+    .summary { 
+        grid-template-columns: 1fr; 
         gap: 12px; 
     }
-    h1 { font-size: 20px; }        
-    .controls select { 
-        padding: 10px 32px 10px 14px; 
-        font-size: 16px;           
+    .card { padding: 16px; }
+    .card p { font-size: 24px; }
+
+    /* Formulario completamente vertical y accesible */
+    .form { 
+        grid-template-columns: 1fr; 
+        gap: 12px;
     }
-    .form { grid-template-columns: 1fr; }
-    .form button { grid-column: span 1; }
-    .footer { flex-direction: column; gap: 16px; width: 100%; }
-    .actions { width: 100%; flex-direction: column; }
-    .btn { width: 100%; }
-    table { display: block; overflow-x: auto; }
+    #concepto { grid-column: span 1; }
+    .form button { grid-column: span 1; padding: 14px; }
+
+    /* Contenedor con Scroll Horizontal Responsivo para la tabla */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    table {
+        min-width: 600px; /* Evita que las columnas se aplasten demasiado */
+    }
+    th, td { padding: 12px 16px; }
+
+    /* Adaptación de los botones inferiores */
+    .footer { 
+        flex-direction: column; 
+        gap: 16px; 
+        align-items: stretch; 
+    }
+    .actions { 
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); /* Botones ordenados en rejilla de 2 */
+        gap: 10px;
+        width: 100%;
+    }
+    .btn { 
+        width: 100%; 
+        padding: 12px 10px;
+        font-size: 13px;
+    }
+    .btn-logout {
+        width: 100%;
+        margin-top: 4px;
+    }
 }
 </style>
 </head>
@@ -383,7 +455,7 @@ input[type="file"] { display: none; }
         </div>
 
         <div class="form-panel">
-            <div class="form">
+            <div class="form" onkeydown="if(event.key === 'Enter') agregar()">
                 <input type="date" id="fecha">
                 <select id="tipo">
                     <option value="ingreso">Ingreso</option>
@@ -417,7 +489,7 @@ input[type="file"] { display: none; }
                     <input type="file" accept=".csv" onchange="importarCSV(this)">
                 </label>
                 <button class="btn btn-export" onclick="exportarCSV()">Exportar CSV</button>
-                <button class="btn btn-report" onclick="generarPDF()">Generar Informe Anual</button>
+                <button class="btn btn-report" onclick="generarPDF()">Generar Informe</button>
             </div>
             <button class="btn btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
         </div>
@@ -429,7 +501,6 @@ input[type="file"] { display: none; }
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script>
-// Configuración de Firebase solicitada con tus nuevas credenciales
 const firebaseConfig = {
   apiKey: "AIzaSyAD5p6pmAEEmmFp5vUEmxXwfZvH6twEYuQ",
   authDomain: "gesalquiler-a79ed.firebaseapp.com",
@@ -480,7 +551,6 @@ auth.onAuthStateChanged(user => {
     loginDiv.style.display = 'none';
     appDiv.style.display = 'block';
     
-    // Escucha activa en tiempo real sobre la rama del usuario
     db.ref('usuarios/' + currentUserUid + '/finanzas').on('value', snapshot => {
         const datos = snapshot.val() || [];
         localStorage.setItem("backup_finanzas", JSON.stringify(datos));
@@ -499,11 +569,9 @@ function cerrarSesion() {
 
 /* === LÓGICA DE SELECTORES (ANUAL) === */
 const { jsPDF } = window.jspdf;
-const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const anioSel = document.getElementById('anio');
 const hoy = new Date();
 
-// Rellenamos el selector de años dinámicamente (-5 y +5 años desde el actual)
 if(anioSel.options.length === 0) {
     for(let y = hoy.getFullYear() - 5; y <= hoy.getFullYear() + 5; y++) {
         anioSel.add(new Option(y, y));
@@ -570,7 +638,6 @@ async function cargar(){
     const tablaBody = document.getElementById('tabla');
     tablaBody.innerHTML = "";
 
-    // Filtrado adaptado única y exclusivamente por el año seleccionado
     const listaAnual = listaCompleta
         .filter(m => {
             if(!m || !m.fecha) return false;
@@ -583,7 +650,7 @@ async function cargar(){
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${formatearFechaISOaDMY(m.fecha)}</td>
-            <td>${m.concepto}</td>
+            <td>${m.concepto || ''}</td>
             <td class="ingreso">${m.tipo == "ingreso" ? formatearNumero(m.cantidad) : ""}</td>
             <td class="gasto">${m.tipo == "gasto" ? formatearNumero(m.cantidad) : ""}</td>
             <td class="delete" onclick="eliminar(${m.id})">✕</td>
@@ -605,10 +672,9 @@ async function cargar(){
 function exportarCSV(){
     let csv = "Fecha;Concepto;Ingreso;Gasto\n";
     leerDatos().then(datos => {
-        // Exporta únicamente los del año en curso en pantalla
         datos.filter(m => m && m.fecha && new Date(m.fecha).getFullYear() == anioSel.value)
         .forEach(m => {
-            csv += `${m.fecha};${m.concepto};${m.tipo == "ingreso" ? m.cantidad : ""};${m.tipo == "gasto" ? m.cantidad : ""}\n`;
+            csv += `${m.fecha};${m.concepto || ''};${m.tipo == "ingreso" ? m.cantidad : ""};${m.tipo == "gasto" ? m.cantidad : ""}\n`;
         });
         descargar(csv, `cuentas_anuales_${anioSel.value}.csv`, "text/csv");
     });
@@ -673,7 +739,7 @@ function generarPDF(){
         .forEach(m => {
             if(y > 270){ pdf.addPage(); y = 20; }
             pdf.text(formatearFechaISOaDMY(m.fecha), 20, y);
-            pdf.text(m.concepto.substring(0, 42), 50, y);
+            pdf.text((m.concepto || '').substring(0, 42), 50, y);
             pdf.text(m.tipo == "ingreso" ? formatearNumero(m.cantidad) + " €" : "", 140, y, {align:"right"});
             pdf.text(m.tipo == "gasto" ? formatearNumero(m.cantidad) + " €" : "", 185, y, {align:"right"});
             y += 6;
@@ -704,7 +770,6 @@ function descargar(c,n,t){
     a.click();
 }
 
-// Evento de recarga de datos al conmutar el año
 anioSel.onchange = cargar;
 
 /* === EXPOSICIÓN GLOBAL === */
