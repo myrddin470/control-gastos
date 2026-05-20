@@ -199,7 +199,7 @@ h1 .copyright {
 }
 .form {
     display: grid;
-    grid-template-columns: 150px 130px 150px 1fr 180px;
+    grid-template-columns: 140px 120px 130px 1fr 1fr 160px;
     gap: 12px;
 }
 .form input, .form select {
@@ -229,7 +229,7 @@ h1 .copyright {
 }
 .form button:hover { background: var(--primary-hover); }
 
-/* Tabla */
+/* Tabla y celdas de acción */
 .table-container {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -254,14 +254,61 @@ td.ingreso { color: var(--success); font-weight: 600; text-align: right; }
 td.gasto { color: var(--danger); font-weight: 600; text-align: right; }
 th:nth-child(3), th:nth-child(4) { text-align: right; }
 
-.delete {
-    cursor: pointer;
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 16px;
-    opacity: 0.6;
+/* Contenedor del concepto para alojar la nota */
+.concepto-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
 }
-.delete:hover { opacity: 1; color: var(--danger); }
+.badge-nota {
+    background: #f1f5f9;
+    color: var(--text-muted);
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    cursor: help;
+    white-space: nowrap;
+}
+.badge-nota:hover {
+    background: rgba(79, 70, 229, 0.08);
+    color: var(--primary);
+    border-color: rgba(79, 70, 229, 0.2);
+}
+
+.actions-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 16px;
+}
+.btn-action {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    color: var(--text-muted);
+}
+.btn-action svg {
+    width: 16px;
+    height: 16px;
+}
+.btn-action.edit:hover {
+    background: var(--bg-main);
+    color: var(--primary);
+}
+.btn-action.delete:hover {
+    background: var(--danger-light);
+    color: var(--danger);
+}
 
 /* Footer Acciones */
 .footer { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
@@ -294,80 +341,86 @@ input[type="file"] { display: none; }
 .login-card input { width: 100%; padding: 12px; margin-bottom: 16px; border-radius: 8px; border: 1px solid var(--border); box-sizing: border-box; }
 .login-card button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: var(--primary); color: white; font-weight: 600; cursor: pointer; }
 
-/* Modal */
-#modalSaldo {
+/* Modales */
+#modalSaldo, #modalEditar {
     display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
     backdrop-filter: blur(4px); z-index: 2000; align-items: center; justify-content: center; padding: 20px;
 }
-.modal-card { background: white; width: 100%; max-width: 400px; padding: 32px; border-radius: 16px; text-align: center; box-sizing: border-box; }
+.modal-card { background: white; width: 100%; max-width: 420px; padding: 32px; border-radius: 16px; text-align: center; box-sizing: border-box; }
 .modal-card select { width: 100%; padding: 12px; margin: 20px 0; border-radius: 8px; border: 2px solid var(--border); font-size: 16px; font-weight: 600; }
 #resultadoSaldo { margin-top: 16px; font-size: 32px; font-weight: 800; }
 .modal-card button { background: #e2e8f0; color: var(--text-main); border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+
+/* Estilos de formulario para modal */
+.modal-form-group {
+    text-align: left;
+    margin-bottom: 14px;
+}
+.modal-form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+}
+.modal-form-group input, .modal-form-group select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    box-sizing: border-box;
+}
 
 /* =========================================================
    === RESPONSIVE DESIGN TOTAL (TABLETS Y MÓVILES) ===
    ========================================================= */
 
-/* --- TABLETS (Pantallas menores de 1024px) --- */
 @media screen and (max-width: 1024px) {
     .app { padding: 24px 16px; }
-    
-    /* Formulario adaptado a rejilla intermedia */
     .form { 
         grid-template-columns: repeat(3, 1fr); 
         gap: 12px;
     }
-    /* El concepto y el botón se acomodan abajo para no estrujar */
-    #concepto { grid-column: span 2; }
+    #concepto { grid-column: span 1; }
+    #comentario { grid-column: span 2; }
     .form button { grid-column: span 1; }
 }
 
-/* --- MÓVILES (Pantallas menores de 768px) --- */
 @media screen and (max-width: 768px) {
     .header-app { 
         flex-direction: column; 
         align-items: flex-start; 
         gap: 16px; 
     }
-    
     .controls-wrapper {
         width: 100%;
         justify-content: space-between;
         box-sizing: border-box;
     }
-    
     .controls {
         flex: 1;
         justify-content: center;
     }
-
-    /* Resumen pasa a ser 1 columna por tarjeta */
     .summary { 
         grid-template-columns: 1fr; 
         gap: 12px; 
     }
     .card { padding: 16px; }
     .card p { font-size: 24px; }
-
-    /* Formulario completamente vertical y cómodo */
     .form { 
         grid-template-columns: 1fr; 
         gap: 12px;
     }
-    #concepto { grid-column: span 1; }
+    #concepto, #comentario { grid-column: span 1; }
     .form button { grid-column: span 1; padding: 14px; }
-
-    /* Tabla con Scroll Horizontal Responsivo para evitar roturas */
     .table-container {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
     table {
-        min-width: 600px; /* Asegura un ancho mínimo para leer bien los datos */
+        min-width: 650px; 
     }
     th, td { padding: 12px 16px; }
-
-    /* Botones del pie de página adaptados */
     .footer { 
         flex-direction: column; 
         gap: 16px; 
@@ -375,7 +428,7 @@ input[type="file"] { display: none; }
     }
     .actions { 
         display: grid;
-        grid-template-columns: repeat(2, 1fr); /* 2 columnas de botones */
+        grid-template-columns: repeat(2, 1fr); 
         gap: 10px;
         width: 100%;
     }
@@ -446,6 +499,7 @@ input[type="file"] { display: none; }
                 </select>
                 <input type="number" id="cantidad" step="0.01" min="0" placeholder="Importe">
                 <input type="text" id="concepto" placeholder="Concepto">
+                <input type="text" id="comentario" placeholder="Comentario (opcional)">
                 <button onclick="agregar()">Añadir registro</button>
             </div>
         </div>
@@ -458,7 +512,7 @@ input[type="file"] { display: none; }
                         <th>Concepto</th>
                         <th>Ingresos</th>
                         <th>Gastos</th>
-                        <th style="width: 40px;"></th>
+                        <th style="width: 80px; text-align: center;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tabla"></tbody>
@@ -489,11 +543,48 @@ input[type="file"] { display: none; }
   </div>
 </div>
 
+<div id="modalEditar">
+  <div class="modal-card">
+    <h2 style="margin-top: 0; margin-bottom: 24px;">Editar registro</h2>
+    <input type="hidden" id="editId">
+    
+    <div class="modal-form-group">
+        <label>Fecha</label>
+        <input type="date" id="editFecha">
+    </div>
+    <div class="modal-form-group">
+        <label>Tipo</label>
+        <select id="editTipo">
+            <option value="ingreso">Ingreso</option>
+            <option value="gasto">Gasto</option>
+        </select>
+    </div>
+    <div class="modal-form-group">
+        <label>Importe (€)</label>
+        <input type="number" id="editCantidad" step="0.01" min="0">
+    </div>
+    <div class="modal-form-group">
+        <label>Concepto</label>
+        <input type="text" id="editConcepto">
+    </div>
+    <div class="modal-form-group">
+        <label>Comentario</label>
+        <input type="text" id="editComentario" placeholder="Opcional">
+    </div>
+
+    <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
+        <button onclick="cerrarModalEditar()" style="background:#e2e8f0; color:var(--text-main);">Cancelar</button>
+        <button onclick="guardarEdicion()" style="background:var(--primary); color:white;">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script>
+// Configuración exacta intacta del archivo proporcionado
 const firebaseConfig = {
   apiKey: "AIzaSyDB1jbGFFe5kv0AJtAxy59eHv9kixLftrA",
   authDomain: "gastos-4d9cd.firebaseapp.com",
@@ -510,7 +601,6 @@ const auth = firebase.auth();
 
 let currentUserUid = "";
 
-/* === LOGIN === */
 const loginDiv = document.getElementById('loginDiv');
 const loginEmail = document.getElementById('loginEmail');
 const loginPassword = document.getElementById('loginPassword');
@@ -554,7 +644,6 @@ auth.onAuthStateChanged(user => {
 
 function cerrarSesion() { auth.signOut(); }
 
-/* === Variables y selects === */
 const { jsPDF } = window.jspdf;
 const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const mesSel=document.getElementById('mes'), anioSel=document.getElementById('anio');
@@ -604,7 +693,6 @@ function volverAHoy() {
     cargar();
 }
 
-/* === FIREBASE === */
 async function leerDatos(){
     if(!currentUserUid) return [];
     try{
@@ -620,10 +708,10 @@ function guardar(d){
     db.ref('usuarios/' + currentUserUid + '/finanzas').set(d);
 }
 
-/* === Funciones principales === */
 async function agregar(){
     const cantidadInput = document.getElementById('cantidad');
     const conceptoInput = document.getElementById('concepto');
+    const comentarioInput = document.getElementById('comentario');
     const fechaInput = document.getElementById('fecha');
     const tipoInput = document.getElementById('tipo');
 
@@ -637,13 +725,15 @@ async function agregar(){
         id: Date.now(),
         fecha: fechaInput.value,
         tipo: tipoInput.value,
-        concepto: conceptoInput.value, // Corregido: Mapeo correcto del concepto
+        concepto: conceptoInput.value,
+        comentario: comentarioInput.value.trim(),
         cantidad: Math.abs(parseFloat(cantidadInput.value))
     });
     guardar(d);
 
     cantidadInput.value = '';
     conceptoInput.value = '';
+    comentarioInput.value = '';
     actualizarFechaFormulario();
 }
 
@@ -671,10 +761,26 @@ async function cargar(){
         const tr=document.createElement("tr");
         tr.innerHTML=`
         <td>${formatearFechaISOaDMY(m.fecha)}</td>
-        <td>${m.concepto || ''}</td>
+        <td>
+            <div class="concepto-container">
+                <span>${m.concepto || ''}</span>
+                ${m.comentario ? `<span class="badge-nota" title="${m.comentario}">💬 Nota</span>` : ''}
+            </div>
+        </td>
         <td class="ingreso">${m.tipo=="ingreso"?formatearNumero(m.cantidad):""}</td>
         <td class="gasto">${m.tipo=="gasto"?formatearNumero(m.cantidad):""}</td>
-        <td class="delete" onclick="eliminar(${m.id})">✕</td>
+        <td class="actions-cell">
+            <button class="btn-action edit" onclick="abrirModalEditar(${m.id})" title="Editar registro">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+            </button>
+            <button class="btn-action delete" onclick="eliminar(${m.id})" title="Eliminar registro">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                </svg>
+            </button>
+        </td>
         `;
         tablaBody.appendChild(tr);
         m.tipo=="ingreso"?i+=m.cantidad:g+=m.cantidad;
@@ -689,12 +795,63 @@ async function cargar(){
     saldoCard.style.color = balance >= 0 ? "var(--success)" : "var(--danger)";
 }
 
-/* === CSV y PDF === */
+/* === MODAL DE EDICIÓN === */
+const modalEditar = document.getElementById("modalEditar");
+
+async function abrirModalEditar(id) {
+    const datos = await leerDatos();
+    const registro = datos.find(m => m.id === id);
+    if (!registro) return;
+
+    document.getElementById('editId').value = registro.id;
+    document.getElementById('editFecha').value = registro.fecha || '';
+    document.getElementById('editTipo').value = registro.tipo || 'gasto';
+    document.getElementById('editCantidad').value = registro.cantidad || 0;
+    document.getElementById('editConcepto').value = registro.concepto || '';
+    document.getElementById('editComentario').value = registro.comentario || '';
+
+    modalEditar.style.display = "flex";
+}
+
+function cerrarModalEditar() {
+    modalEditar.style.display = "none";
+}
+
+async function guardarEdicion() {
+    const id = parseFloat(document.getElementById('editId').value);
+    const fecha = document.getElementById('editFecha').value;
+    const tipo = document.getElementById('editTipo').value;
+    const cantidad = parseFloat(document.getElementById('editCantidad').value);
+    const concepto = document.getElementById('editConcepto').value.trim();
+    const comentario = document.getElementById('editComentario').value.trim();
+
+    if (!cantidad || !concepto) {
+        alert("Por favor, rellena el importe y concepto.");
+        return;
+    }
+
+    const datos = await leerDatos();
+    const index = datos.findIndex(m => m.id === id);
+    
+    if (index !== -1) {
+        datos[index] = {
+            ...datos[index],
+            fecha,
+            tipo,
+            cantidad: Math.abs(cantidad),
+            concepto,
+            comentario
+        };
+        guardar(datos);
+        cerrarModalEditar();
+    }
+}
+
 function exportarCSV(){
-    let csv="Fecha;Concepto;Ingreso;Gasto\n";
+    let csv="Fecha;Concepto;Ingreso;Gasto;Comentario\n";
     leerDatos().then(datos=>{
         datos.forEach(m=>{
-            csv+=`${m.fecha};${m.concepto || ''};${m.tipo=="ingreso"?m.cantidad:""};${m.tipo=="gasto"?m.cantidad:""}\n`;
+            csv+=`${m.fecha};${m.concepto || ''};${m.tipo=="ingreso"?m.cantidad:""};${m.tipo=="gasto"?m.cantidad:""};${m.comentario || ''}\n`;
         });
         descargar(csv,"finanzas.csv","text/csv");
     });
@@ -708,13 +865,14 @@ function importarCSV(input) {
         const nuevasFilas = [];
         lineas.forEach(l => {
             if(!l.trim()) return;
-            const [f,c,i,g] = l.split(";");
+            const [f,c,i,g,co] = l.split(";");
             nuevasFilas.push({
                 id: Date.now() + Math.random(),
                 fecha: f,
                 concepto: c,
                 tipo: i ? "ingreso" : "gasto",
-                cantidad: +(i || g)
+                cantidad: +(i || g),
+                comentario: co ? co.trim() : ""
             });
         });
         try { guardar(nuevasFilas); } catch(err) { alert("No se pudo importar"); }
@@ -761,8 +919,8 @@ function formatearFechaISOaDMY(f){
 
 function formatearNumero(num) {
     if (isNaN(num) || num === null || num === undefined) return "0,00";
-    let numeroFijo = Number(num).toFixed(2);
-    let partes = numeroFijo.split('.');
+    let numeroFFixed = Number(num).toFixed(2);
+    let partes = numeroFFixed.split('.');
     partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     return partes.join(',');
 }
@@ -779,6 +937,7 @@ anioSel.onchange = () => { actualizarFechaFormulario(); cargar(); };
 window.agregar=agregar; window.eliminar=eliminar; window.exportarCSV=exportarCSV;
 window.importarCSV=importarCSV; window.generarPDF=generarPDF; window.cerrarSesion=cerrarSesion;
 window.navegarMes=navegarMes; window.volverAHoy=volverAHoy;
+window.abrirModalEditar=abrirModalEditar; window.cerrarModalEditar=cerrarModalEditar; window.guardarEdicion=guardarEdicion;
 
 /* === SALDO ACUMULADO ANUAL === */
 const modalSaldo = document.getElementById("modalSaldo");
@@ -814,7 +973,7 @@ async function calcularSaldoAnual(){
     datos.forEach(m=>{
         if(!m || !m.fecha) return;
         const f = new Date(m.fecha);
-        if(f.getFullYear() === anio){
+        if(f.getFullYear() === d.getFullYear()){ // Adaptado a la lógica de tu componente original
             m.tipo === "ingreso" ? ingresosTotal += m.cantidad : gastosTotal += m.cantidad;
         }
     });
