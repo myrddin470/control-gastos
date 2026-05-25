@@ -341,17 +341,12 @@ input[type="file"] { display: none; }
 .login-card input { width: 100%; padding: 12px; margin-bottom: 16px; border-radius: 8px; border: 1px solid var(--border); box-sizing: border-box; }
 .login-card button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: var(--primary); color: white; font-weight: 600; cursor: pointer; }
 
-/* Modales */
-#modalSaldo, #modalEditar {
+/* Modal Edición */
+#modalEditar {
     display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
     backdrop-filter: blur(4px); z-index: 2000; align-items: center; justify-content: center; padding: 20px;
 }
 .modal-card { background: white; width: 100%; max-width: 420px; padding: 32px; border-radius: 16px; text-align: center; box-sizing: border-box; }
-.modal-card select { width: 100%; padding: 12px; margin: 20px 0; border-radius: 8px; border: 2px solid var(--border); font-size: 16px; font-weight: 600; }
-#resultadoSaldo { margin-top: 16px; font-size: 32px; font-weight: 800; }
-.modal-card button { background: #e2e8f0; color: var(--text-main); border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; }
-
-/* Estilos de formulario para modal */
 .modal-form-group {
     text-align: left;
     margin-bottom: 14px;
@@ -526,21 +521,12 @@ input[type="file"] { display: none; }
                     <input type="file" accept=".csv" onchange="importarCSV(this)">
                 </label>
                 <button class="btn btn-export" onclick="exportarCSV()">EXPORTAR</button>
-                <button class="btn btn-report" onclick="generarPDF()">INFORME</button>
-                <button class="btn btn-saldo-anual" onclick="abrirModalSaldo()">ANUAL</button>
+                <button class="btn btn-report" onclick="generarPDF()">INFORME MES</button>
+                <button class="btn btn-saldo-anual" onclick="generarPDFAnual()"> INFORME ANUAL</button>
             </div>
             <button class="btn btn-logout" onclick="cerrarSesion()">SALIR</button>
         </div>
     </div>
-</div>
-
-<div id="modalSaldo">
-  <div class="modal-card">
-    <h2>Saldo acumulado anual</h2>
-    <select id="anioSaldo"></select>
-    <div id="resultadoSaldo">0 €</div>
-    <button onclick="cerrarModalSaldo()">Cerrar</button>
-  </div>
 </div>
 
 <div id="modalEditar">
@@ -584,7 +570,6 @@ input[type="file"] { display: none; }
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script>
-// Configuración exacta intacta del archivo proporcionado
 const firebaseConfig = {
   apiKey: "AIzaSyDB1jbGFFe5kv0AJtAxy59eHv9kixLftrA",
   authDomain: "gastos-4d9cd.firebaseapp.com",
@@ -911,6 +896,94 @@ function generarPDF(){
     });
 }
 
+/* === INFORME ANUAL PDF === */
+async function generarPDFAnual() {
+    const anio = parseInt(anioSel.value);
+    const datos = await leerDatos();
+
+    const datosAnio = datos.filter(m => {
+        if (!m || !m.fecha) return false;
+        const f = new Date(m.fecha);
+        return f.getFullYear() === anio;
+    });
+
+    if (datosAnio.length === 0) {
+        alert(`No hay datos registrados para el año ${anio}.`);
+        return;
+    }
+
+    const mesesData = {};
+    for (let i = 0; i < 12; i++) {
+        mesesData[i] = { ingresos: 0, gastos: 0 };
+    }
+
+    datosAnio.forEach(m => {
+        const mes = new Date(m.fecha).getMonth();
+        if (m.tipo === "ingreso") {
+            mesesData[mes].ingresos += m.cantidad;
+        } else if (m.tipo === "gasto") {
+            mesesData[mes].gastos += m.cantidad;
+        }
+    });
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    let y = 20;
+
+    pdf.setFontSize(16);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(`INFORME ANUAL DE INGRESOS Y GASTOS - ${anio}`, 105, y, { align: "center" });
+    y += 15;
+
+    pdf.setFontSize(11);
+    pdf.text("Mes", 20, y);
+    pdf.text("Ingresos", 80, y, { align: "right" });
+    pdf.text("Gastos", 130, y, { align: "right" });
+    pdf.text("Saldo del mes", 180, y, { align: "right" });
+    y += 4;
+    pdf.line(20, y, 190, y);
+    y += 8;
+
+    pdf.setFont("helvetica", "normal");
+
+    let totalIngresos = 0;
+    let totalGastos = 0;
+
+    for (let i = 0; i < 12; i++) {
+        const ing = mesesData[i].ingresos;
+        const gas = mesesData[i].gastos;
+
+        if (ing > 0 || gas > 0) {
+            const saldoMes = ing - gas;
+            totalIngresos += ing;
+            totalGastos += gas;
+
+            if (y > 270) {
+                pdf.addPage();
+                y = 20;
+            }
+
+            pdf.text(meses[i], 20, y);
+            pdf.text(formatearNumero(ing) + " €", 80, y, { align: "right" });
+            pdf.text(formatearNumero(gas) + " €", 130, y, { align: "right" });
+            pdf.text(formatearNumero(saldoMes) + " €", 180, y, { align: "right" });
+            y += 8;
+        }
+    }
+
+    const saldoAnual = totalIngresos - totalGastos;
+    y += 4;
+    pdf.line(20, y, 190, y);
+    y += 8;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.text("TOTAL ANUAL", 20, y);
+    pdf.text(formatearNumero(totalIngresos) + " €", 80, y, { align: "right" });
+    pdf.text(formatearNumero(totalGastos) + " €", 130, y, { align: "right" });
+    pdf.text(formatearNumero(saldoAnual) + " €", 180, y, { align: "right" });
+
+    pdf.save(`Informe_Anual_${anio}.pdf`);
+}
+
 function formatearFechaISOaDMY(f){
     if(!f) return "";
     const [y,m,d]=f.split("-");
@@ -938,50 +1011,7 @@ window.agregar=agregar; window.eliminar=eliminar; window.exportarCSV=exportarCSV
 window.importarCSV=importarCSV; window.generarPDF=generarPDF; window.cerrarSesion=cerrarSesion;
 window.navegarMes=navegarMes; window.volverAHoy=volverAHoy;
 window.abrirModalEditar=abrirModalEditar; window.cerrarModalEditar=cerrarModalEditar; window.guardarEdicion=guardarEdicion;
-
-/* === SALDO ACUMULADO ANUAL === */
-const modalSaldo = document.getElementById("modalSaldo");
-const anioSaldo = document.getElementById("anioSaldo");
-const resultadoSaldo = document.getElementById("resultadoSaldo");
-
-window.abrirModalSaldo = function(){ modalSaldo.style.display = "flex"; cargarAniosSaldo(); };
-window.cerrarModalSaldo = function(){ modalSaldo.style.display = "none"; };
-
-async function cargarAniosSaldo(){
-    const datos = await leerDatos();
-    const anios = [...new Set(datos.map(m => {
-        if(!m || !m.fecha) return new Date().getFullYear();
-        return new Date(m.fecha).getFullYear();
-    }))].sort((a,b)=>b-a);
-
-    anioSaldo.innerHTML = "";
-    anios.forEach(a=>{
-        const option = document.createElement("option");
-        option.value = a; option.textContent = a;
-        anioSaldo.appendChild(option);
-    });
-    if(anios.length) anioSaldo.value = anios[0];
-    anioSaldo.onchange = calcularSaldoAnual;
-    calcularSaldoAnual();
-}
-
-async function calcularSaldoAnual(){
-    const datos = await leerDatos();
-    const anio = parseInt(anioSaldo.value);
-    let ingresosTotal = 0, gastosTotal = 0;
-
-    datos.forEach(m=>{
-        if(!m || !m.fecha) return;
-        const f = new Date(m.fecha);
-        if(f.getFullYear() === d.getFullYear()){ // Adaptado a la lógica de tu componente original
-            m.tipo === "ingreso" ? ingresosTotal += m.cantidad : gastosTotal += m.cantidad;
-        }
-    });
-
-    const saldo = ingresosTotal - gastosTotal;
-    resultadoSaldo.textContent = formatearNumero(saldo) + " €";
-    resultadoSaldo.style.color = saldo >= 0 ? "var(--success)" : "var(--danger)";
-}
+window.generarPDFAnual=generarPDFAnual;
 </script>
 </body>
 </html>
