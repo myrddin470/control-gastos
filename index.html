@@ -148,7 +148,7 @@ h1 .copyright {
     font-weight: 600;             
     border-radius: 8px;
     border: 1px solid transparent; 
-    background: var(--bg-card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E") no-repeat;
+    background: var(--bg-card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5-7.5-7.5-7.5'/%3E%3C/svg%3E") no-repeat;
     background-position: right 8px center;
     background-size: 12px;        
     color: var(--primary);        
@@ -269,8 +269,9 @@ th:nth-child(3), th:nth-child(4) { text-align: right; }
     border-radius: 6px;
     font-weight: 500;
     border: 1px solid var(--border);
-    cursor: help;
+    cursor: pointer; /* Modificado de help a pointer */
     white-space: nowrap;
+    transition: all 0.2s ease;
 }
 .badge-nota:hover {
     background: rgba(79, 70, 229, 0.08);
@@ -341,8 +342,8 @@ input[type="file"] { display: none; }
 .login-card input { width: 100%; padding: 12px; margin-bottom: 16px; border-radius: 8px; border: 1px solid var(--border); box-sizing: border-box; }
 .login-card button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: var(--primary); color: white; font-weight: 600; cursor: pointer; }
 
-/* Modal Edición */
-#modalEditar {
+/* Modales */
+#modalEditar, #modalComentario {
     display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
     backdrop-filter: blur(4px); z-index: 2000; align-items: center; justify-content: center; padding: 20px;
 }
@@ -559,8 +560,20 @@ input[type="file"] { display: none; }
     </div>
 
     <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
-        <button onclick="cerrarModalEditar()" style="background:#e2e8f0; color:var(--text-main);">Cancelar</button>
-        <button onclick="guardarEdicion()" style="background:var(--primary); color:white;">Guardar cambios</button>
+        <button onclick="cerrarModalEditar()" style="background:#e2e8f0; color:var(--text-main); border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">Cancelar</button>
+        <button onclick="guardarEdicion()" style="background:var(--primary); color:white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalComentario">
+  <div class="modal-card">
+    <h2 style="margin-top: 0; margin-bottom: 16px;">Comentario</h2>
+    <div style="background: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: left; max-height: 200px; overflow-y: auto;">
+        <p id="textoModalComentario" style="margin: 0; font-size: 14px; color: var(--text-main); line-height: 1.5; white-space: pre-wrap;"></p>
+    </div>
+    <div style="display: flex; justify-content: flex-end;">
+        <button onclick="cerrarModalComentario()" style="background:var(--primary); color:white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Cerrar</button>
     </div>
   </div>
 </div>
@@ -749,7 +762,7 @@ async function cargar(){
         <td>
             <div class="concepto-container">
                 <span>${m.concepto || ''}</span>
-                ${m.comentario ? `<span class="badge-nota" title="${m.comentario}">💬 Nota</span>` : ''}
+                ${m.comentario ? `<span class="badge-nota" onclick="abrirModalComentario(${m.id})" title="Ver comentario">💬 Nota</span>` : ''}
             </div>
         </td>
         <td class="ingreso">${m.tipo=="ingreso"?formatearNumero(m.cantidad):""}</td>
@@ -830,6 +843,22 @@ async function guardarEdicion() {
         guardar(datos);
         cerrarModalEditar();
     }
+}
+
+/* === MODAL DE COMENTARIOS === */
+const modalComentario = document.getElementById("modalComentario");
+
+async function abrirModalComentario(id) {
+    const datos = await leerDatos();
+    const registro = datos.find(m => m.id === id);
+    if (!registro || !registro.comentario) return;
+
+    document.getElementById('textoModalComentario').textContent = registro.comentario;
+    modalComentario.style.display = "flex";
+}
+
+function cerrarModalComentario() {
+    modalComentario.style.display = "none";
 }
 
 function exportarCSV(){
@@ -1012,6 +1041,7 @@ window.importarCSV=importarCSV; window.generarPDF=generarPDF; window.cerrarSesio
 window.navegarMes=navegarMes; window.volverAHoy=volverAHoy;
 window.abrirModalEditar=abrirModalEditar; window.cerrarModalEditar=cerrarModalEditar; window.guardarEdicion=guardarEdicion;
 window.generarPDFAnual=generarPDFAnual;
+window.abrirModalComentario=abrirModalComentario; window.cerrarModalComentario=cerrarModalComentario;
 </script>
 </body>
 </html>
