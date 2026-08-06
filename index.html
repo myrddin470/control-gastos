@@ -162,7 +162,7 @@ h1 .copyright {
 /* Tarjetas de Resumen */
 .summary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 20px;
     margin-bottom: 32px;
 }
@@ -269,7 +269,7 @@ th:nth-child(3), th:nth-child(4) { text-align: right; }
     border-radius: 6px;
     font-weight: 500;
     border: 1px solid var(--border);
-    cursor: pointer; /* Modificado de help a pointer */
+    cursor: pointer; 
     white-space: nowrap;
     transition: all 0.2s ease;
 }
@@ -373,6 +373,9 @@ input[type="file"] { display: none; }
 
 @media screen and (max-width: 1024px) {
     .app { padding: 24px 16px; }
+    .summary { 
+        grid-template-columns: repeat(2, 1fr); 
+    }
     .form { 
         grid-template-columns: repeat(3, 1fr); 
         gap: 12px;
@@ -481,9 +484,20 @@ input[type="file"] { display: none; }
         </div>
 
         <div class="summary">
+            <div class="card saldo-inicial">
+                <h3>Saldo cuenta día 1</h3>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px;">
+                    <p id="displaySaldoInicial" style="margin: 0; color: var(--text-main);">-</p>
+                    <button onclick="editarSaldoInicial()" class="btn-action edit" style="margin: 0; padding: 4px;" title="Editar saldo día 1">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 20px; height: 20px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
             <div class="card ingresos"><h3>Ingresos</h3><p id="ingresos">0 €</p></div>
             <div class="card gastos"><h3>Gastos</h3><p id="gastos">0 €</p></div>
-            <div class="card saldo"><h3>Saldo</h3><p id="saldo">0 €</p></div>
+            <div class="card saldo"><h3>Saldo mes</h3><p id="saldo">0 €</p></div>
         </div>
 
         <div class="form-panel">
@@ -747,9 +761,18 @@ async function cargar(){
     const tablaBody = document.getElementById('tabla');
     tablaBody.innerHTML="";
 
+    // Buscar y mostrar el saldo inicial del mes/año seleccionado
+    const saldoInicialRecord = listaCompleta.find(m => m.tipo === 'saldo_inicial' && m.mes == mesSel.value && m.anio == anioSel.value);
+    if (saldoInicialRecord) {
+        document.getElementById('displaySaldoInicial').textContent = formatearNumero(saldoInicialRecord.cantidad) + " €";
+    } else {
+        document.getElementById('displaySaldoInicial').textContent = "-";
+    }
+
     const lista = listaCompleta
         .filter(m=>{
-            if(!m || !m.fecha) return false;
+            // Excluir saldo_inicial de la tabla normal
+            if(!m || !m.fecha || m.tipo === 'saldo_inicial') return false; 
             const f=new Date(m.fecha);
             return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
         })
@@ -791,6 +814,44 @@ async function cargar(){
     const saldoCard = document.getElementById('saldo');
     saldoCard.textContent=formatearNumero(balance)+" €";
     saldoCard.style.color = balance >= 0 ? "var(--success)" : "var(--danger)";
+}
+
+/* === EDICIÓN DE SALDO INICIAL === */
+async function editarSaldoInicial() {
+    let actual = document.getElementById('displaySaldoInicial').textContent;
+    let defaultVal = actual !== "-" ? actual.replace(" €","").replace(/\./g,"").replace(",",".") : "";
+    let val = prompt("Introduce el saldo en cuenta para el día 1 del mes seleccionado (deja en blanco para borrar):", defaultVal);
+    
+    if (val === null) return; 
+    
+    const d = await leerDatos();
+    const mes = mesSel.value;
+    const anio = anioSel.value;
+    let filtrados = d.filter(m => !(m.tipo === 'saldo_inicial' && m.mes == mes && m.anio == anio));
+
+    if (val.trim() === "") {
+        guardar(filtrados);
+        cargar();
+        return;
+    }
+
+    val = parseFloat(val.replace(",", "."));
+    if (isNaN(val)) {
+        alert("Por favor, introduce un número válido.");
+        return;
+    }
+    
+    filtrados.push({
+        id: Date.now() + Math.random(),
+        tipo: 'saldo_inicial',
+        mes: mes,
+        anio: anio,
+        cantidad: val,
+        fecha: `${anio}-${String(parseInt(mes)+1).padStart(2,'0')}-01` // Para evitar romper filtros estrictos
+    });
+    
+    guardar(filtrados);
+    cargar();
 }
 
 /* === MODAL DE EDICIÓN === */
@@ -865,6 +926,7 @@ function exportarCSV(){
     let csv="Fecha;Concepto;Ingreso;Gasto;Comentario\n";
     leerDatos().then(datos=>{
         datos.forEach(m=>{
+            if (m.tipo === 'saldo_inicial') return; // Excluir de CSV
             csv+=`${m.fecha};${m.concepto || ''};${m.tipo=="ingreso"?m.cantidad:""};${m.tipo=="gasto"?m.cantidad:""};${m.comentario || ''}\n`;
         });
         descargar(csv,"finanzas.csv","text/csv");
@@ -908,7 +970,7 @@ function generarPDF(){
     y+=4; pdf.line(20,y,190,y); y+=6; pdf.setFont("helvetica","normal");
     leerDatos().then(datos=>{
         datos.filter(m=>{
-            if(!m || !m.fecha) return false;
+            if(!m || !m.fecha || m.tipo === 'saldo_inicial') return false; // Excluir
             const f=new Date(m.fecha);
             return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
         })
@@ -931,7 +993,7 @@ async function generarPDFAnual() {
     const datos = await leerDatos();
 
     const datosAnio = datos.filter(m => {
-        if (!m || !m.fecha) return false;
+        if (!m || !m.fecha || m.tipo === 'saldo_inicial') return false; // Excluir
         const f = new Date(m.fecha);
         return f.getFullYear() === anio;
     });
@@ -1040,7 +1102,7 @@ window.agregar=agregar; window.eliminar=eliminar; window.exportarCSV=exportarCSV
 window.importarCSV=importarCSV; window.generarPDF=generarPDF; window.cerrarSesion=cerrarSesion;
 window.navegarMes=navegarMes; window.volverAHoy=volverAHoy;
 window.abrirModalEditar=abrirModalEditar; window.cerrarModalEditar=cerrarModalEditar; window.guardarEdicion=guardarEdicion;
-window.generarPDFAnual=generarPDFAnual;
+window.generarPDFAnual=generarPDFAnual; window.editarSaldoInicial=editarSaldoInicial;
 window.abrirModalComentario=abrirModalComentario; window.cerrarModalComentario=cerrarModalComentario;
 </script>
 </body>
