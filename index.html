@@ -367,6 +367,17 @@ input[type="file"] { display: none; }
     box-sizing: border-box;
 }
 
+
+#modalEditar, #modalComentario {
+    display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px); z-index: 2000; align-items: center; justify-content: center; padding: 20px;
+}
+
+#modalEditar, #modalComentario, #modalInformeAnual {
+    display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px); z-index: 2000; align-items: center; justify-content: center; padding: 20px;
+}
+
 /* =========================================================
    === RESPONSIVE DESIGN TOTAL (TABLETS Y MÓVILES) ===
    ========================================================= */
@@ -485,7 +496,7 @@ input[type="file"] { display: none; }
 
         <div class="summary">
             <div class="card saldo-inicial">
-                <h3>Saldo cuenta día 1</h3>
+                <h3>Saldo cuenta inicio mes:</h3>
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px;">
                     <p id="displaySaldoInicial" style="margin: 0; color: var(--text-main);">-</p>
                     <button onclick="editarSaldoInicial()" class="btn-action edit" style="margin: 0; padding: 4px;" title="Editar saldo día 1">
@@ -537,7 +548,7 @@ input[type="file"] { display: none; }
                 </label>
                 <button class="btn btn-export" onclick="exportarCSV()">EXPORTAR</button>
                 <button class="btn btn-report" onclick="generarPDF()">INFORME MES</button>
-                <button class="btn btn-saldo-anual" onclick="generarPDFAnual()"> INFORME ANUAL</button>
+                <button class="btn btn-saldo-anual" onclick="abrirModalInformeAnual()"> INFORMES</button>
             </div>
             <button class="btn btn-logout" onclick="cerrarSesion()">SALIR</button>
         </div>
@@ -591,6 +602,28 @@ input[type="file"] { display: none; }
     </div>
   </div>
 </div>
+
+<div id="modalInformeAnual">
+  <div class="modal-card">
+    <h2 style="margin-top: 0; margin-bottom: 24px;">Seleccionar Periodo de Informe</h2>
+    
+    <div class="modal-form-group">
+        <label for="mesInicial">Mes Inicial</label>
+        <select id="mesInicial"></select>
+    </div>
+    
+    <div class="modal-form-group">
+        <label for="mesFinal">Mes Final</label>
+        <select id="mesFinal"></select>
+    </div>
+
+    <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
+        <button onclick="cerrarModalInformeAnual()" style="background:#e2e8f0; color:var(--text-main); border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">Cancelar</button>
+        <button onclick="generarPDFAnual()" style="background:var(--primary); color:white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">Generar PDF</button>
+    </div>
+  </div>
+</div>
+
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -922,6 +955,32 @@ function cerrarModalComentario() {
     modalComentario.style.display = "none";
 }
 
+/* === MODAL DE INFORME ANUAL / PERIODO === */
+const modalInformeAnual = document.getElementById("modalInformeAnual");
+
+function abrirModalInformeAnual() {
+    const selectInicial = document.getElementById('mesInicial');
+    const selectFinal = document.getElementById('mesFinal');
+
+    // Rellenar combos de meses si están vacíos
+    if (selectInicial.options.length === 0) {
+        meses.forEach((m, i) => {
+            selectInicial.add(new Option(m, i));
+            selectFinal.add(new Option(m, i));
+        });
+    }
+
+    // Establecer valores por defecto (Enero como inicio, Diciembre como fin)
+    selectInicial.value = 0;
+    selectFinal.value = 11;
+
+    modalInformeAnual.style.display = "flex";
+}
+
+function cerrarModalInformeAnual() {
+    modalInformeAnual.style.display = "none";
+}
+
 function exportarCSV(){
     let csv="Fecha;Concepto;Ingreso;Gasto;Comentario\n";
     leerDatos().then(datos=>{
@@ -956,123 +1015,188 @@ function importarCSV(input) {
     r.readAsText(input.files[0]);
 }
 
-function generarPDF(){
-    const pdf=new jsPDF("p","mm","a4");
-    let y=20;
-    pdf.setFontSize(16); pdf.setFont("helvetica","bold");
-    pdf.text(`INFORME INGRESOS Y GASTO DEL ${meses[mesSel.value].toUpperCase()} ${anioSel.value}`,105,y,{align:"center"});
-    y+=12; pdf.setFontSize(11); pdf.setFont("helvetica","normal");
-    pdf.text(`Total ingresos: ${document.getElementById('ingresos').textContent}`,20,y); y+=6;
-    pdf.text(`Total gastos: ${document.getElementById('gastos').textContent}`,20,y); y+=6;
-    pdf.text(`Saldo: ${document.getElementById('saldo').textContent}`,20,y); y+=12;
-    pdf.setFont("helvetica","bold"); pdf.text("Fecha",20,y); pdf.text("Concepto",50,y);
-    pdf.text("Ingreso",135,y,{align:"right"}); pdf.text("Gasto",180,y,{align:"right"});
-    y+=4; pdf.line(20,y,190,y); y+=6; pdf.setFont("helvetica","normal");
-    leerDatos().then(datos=>{
-        datos.filter(m=>{
-            if(!m || !m.fecha || m.tipo === 'saldo_inicial') return false; // Excluir
-            const f=new Date(m.fecha);
-            return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
-        })
-        .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha))
-        .forEach(m=>{
-            if(y>270){pdf.addPage();y=20;}
-            pdf.text(formatearFechaISOaDMY(m.fecha),20,y);
-            pdf.text((m.concepto || '').substring(0,45),50,y);
-            pdf.text(m.tipo=="ingreso"?formatearNumero(m.cantidad):"",135,y,{align:"right"});
-            pdf.text(m.tipo=="gasto"?formatearNumero(m.cantidad):"",180,y,{align:"right"});
-            y+=6;
-        });
-        pdf.save(`Informe_${meses[mesSel.value]}_${anioSel.value}.pdf`);
-    });
-}
-
-/* === INFORME ANUAL PDF === */
-async function generarPDFAnual() {
-    const anio = parseInt(anioSel.value);
-    const datos = await leerDatos();
-
-    const datosAnio = datos.filter(m => {
-        if (!m || !m.fecha || m.tipo === 'saldo_inicial') return false; // Excluir
-        const f = new Date(m.fecha);
-        return f.getFullYear() === anio;
-    });
-
-    if (datosAnio.length === 0) {
-        alert(`No hay datos registrados para el año ${anio}.`);
-        return;
-    }
-
-    const mesesData = {};
-    for (let i = 0; i < 12; i++) {
-        mesesData[i] = { ingresos: 0, gastos: 0 };
-    }
-
-    datosAnio.forEach(m => {
-        const mes = new Date(m.fecha).getMonth();
-        if (m.tipo === "ingreso") {
-            mesesData[mes].ingresos += m.cantidad;
-        } else if (m.tipo === "gasto") {
-            mesesData[mes].gastos += m.cantidad;
-        }
-    });
-
+async function generarPDF(){
     const pdf = new jsPDF("p", "mm", "a4");
     let y = 20;
 
-    pdf.setFontSize(16);
+    pdf.setFontSize(16); 
     pdf.setFont("helvetica", "bold");
-    pdf.text(`INFORME ANUAL DE INGRESOS Y GASTOS - ${anio}`, 105, y, { align: "center" });
+    pdf.text(`INFORME INGRESOS Y GASTO DEL ${meses[mesSel.value].toUpperCase()} ${anioSel.value}`, 105, y, { align: "center" });
+    
+    y += 12; 
+    pdf.setFontSize(11); 
+    pdf.setFont("helvetica", "normal");
+
+    // Obtener el saldo del día 1 del mes visible en pantalla
+    const saldoInicialTexto = document.getElementById('displaySaldoInicial').textContent;
+
+    // Resumen de la cabecera
+    pdf.text(`Saldo cuenta inicio mes: ${saldoInicialTexto}`, 20, y); y += 6;
+    pdf.text(`Total ingresos: ${document.getElementById('ingresos').textContent}`, 20, y); y += 6;
+    pdf.text(`Total gastos: ${document.getElementById('gastos').textContent}`, 20, y); y += 6;
+    pdf.text(`Saldo mes: ${document.getElementById('saldo').textContent}`, 20, y); y += 12;
+
+    // Encabezados de la tabla de movimientos
+    pdf.setFont("helvetica", "bold"); 
+    pdf.text("Fecha", 20, y); 
+    pdf.text("Concepto", 50, y);
+    pdf.text("Ingreso", 135, y, { align: "right" }); 
+    pdf.text("Gasto", 180, y, { align: "right" });
+    
+    y += 4; 
+    pdf.line(20, y, 190, y); 
+    y += 6; 
+    pdf.setFont("helvetica", "normal");
+
+    // Imprimir el detalle de movimientos
+    const datos = await leerDatos();
+    datos.filter(m => {
+        if (!m || !m.fecha || m.tipo === 'saldo_inicial') return false; // Excluir registro de saldo inicial de la lista
+        const f = new Date(m.fecha);
+        return f.getMonth() == mesSel.value && f.getFullYear() == anioSel.value;
+    })
+    .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+    .forEach(m => {
+        if (y > 270) {
+            pdf.addPage();
+            y = 20;
+        }
+        pdf.text(formatearFechaISOaDMY(m.fecha), 20, y);
+        pdf.text((m.concepto || '').substring(0, 45), 50, y);
+        pdf.text(m.tipo == "ingreso" ? formatearNumero(m.cantidad) : "", 135, y, { align: "right" });
+        pdf.text(m.tipo == "gasto" ? formatearNumero(m.cantidad) : "", 180, y, { align: "right" });
+        y += 6;
+    });
+
+    pdf.save(`Informe_${meses[mesSel.value]}_${anioSel.value}.pdf`);
+}
+
+/* === INFORME ANUAL PDF === */
+/* === INFORME PERIODO / ANUAL PDF === */
+async function generarPDFAnual() {
+    const mesIni = parseInt(document.getElementById('mesInicial').value);
+    const mesFin = parseInt(document.getElementById('mesFinal').value);
+
+    // Validación de rango de meses
+    if (mesIni > mesFin) {
+        alert("El mes inicial no puede ser posterior al mes final.");
+        return;
+    }
+
+    const anio = parseInt(anioSel.value);
+    const datos = await leerDatos();
+
+    // Estructura para almacenar los datos por mes dentro del rango
+    const mesesData = {};
+    for (let i = mesIni; i <= mesFin; i++) {
+        mesesData[i] = { saldoInicial: null, ingresos: 0, gastos: 0 };
+    }
+
+    // Procesar los registros de la base de datos
+    datos.forEach(m => {
+        if (!m) return;
+
+        // Recuperar Saldo inicial del mes si existe
+        if (m.tipo === 'saldo_inicial' && parseInt(m.anio) === anio) {
+            const mesIdx = parseInt(m.mes);
+            if (mesIdx >= mesIni && mesIdx <= mesFin) {
+                mesesData[mesIdx].saldoInicial = m.cantidad;
+            }
+        } 
+        // Recuperar Ingresos y Gastos
+        else if (m.fecha && m.tipo !== 'saldo_inicial') {
+            const f = new Date(m.fecha);
+            if (f.getFullYear() === anio) {
+                const mesIdx = f.getMonth();
+                if (mesIdx >= mesIni && mesIdx <= mesFin) {
+                    if (m.tipo === "ingreso") {
+                        mesesData[mesIdx].ingresos += m.cantidad;
+                    } else if (m.tipo === "gasto") {
+                        mesesData[mesIdx].gastos += m.cantidad;
+                    }
+                }
+            }
+        }
+    });
+
+    // Crear el documento PDF
+    const pdf = new jsPDF("p", "mm", "a4");
+    let y = 20;
+
+    pdf.setFontSize(15);
+    pdf.setFont("helvetica", "bold");
+    
+    const tituloPeriodo = (mesIni === mesFin) 
+        ? `${meses[mesIni].toUpperCase()} ${anio}` 
+        : `${meses[mesIni].toUpperCase()} - ${meses[mesFin].toUpperCase()} ${anio}`;
+
+    pdf.text(`INFORME DE INGRESOS Y GASTOS (${tituloPeriodo})`, 105, y, { align: "center" });
     y += 15;
 
-    pdf.setFontSize(11);
-    pdf.text("Mes", 20, y);
-    pdf.text("Ingresos", 80, y, { align: "right" });
-    pdf.text("Gastos", 130, y, { align: "right" });
-    pdf.text("Saldo del mes", 180, y, { align: "right" });
+    // Cabecera de la tabla (5 columnas ajustadas a ancho A4)
+    pdf.setFontSize(10);
+    pdf.text("Mes", 15, y);
+    pdf.text("Saldo Día 1", 65, y, { align: "right" });
+    pdf.text("Ingresos", 105, y, { align: "right" });
+    pdf.text("Gastos", 145, y, { align: "right" });
+    pdf.text("Saldo mes", 195, y, { align: "right" });
     y += 4;
-    pdf.line(20, y, 190, y);
-    y += 8;
+    pdf.line(15, y, 195, y);
+    y += 7;
 
     pdf.setFont("helvetica", "normal");
 
     let totalIngresos = 0;
     let totalGastos = 0;
 
-    for (let i = 0; i < 12; i++) {
+    // Recorrer los meses seleccionados e imprimirlos
+    for (let i = mesIni; i <= mesFin; i++) {
         const ing = mesesData[i].ingresos;
         const gas = mesesData[i].gastos;
+        const saldoIni = mesesData[i].saldoInicial;
 
-        if (ing > 0 || gas > 0) {
-            const saldoMes = ing - gas;
-            totalIngresos += ing;
-            totalGastos += gas;
+        const saldoMes = ing - gas;
+        totalIngresos += ing;
+        totalGastos += gas;
 
-            if (y > 270) {
-                pdf.addPage();
-                y = 20;
-            }
-
-            pdf.text(meses[i], 20, y);
-            pdf.text(formatearNumero(ing) + " €", 80, y, { align: "right" });
-            pdf.text(formatearNumero(gas) + " €", 130, y, { align: "right" });
-            pdf.text(formatearNumero(saldoMes) + " €", 180, y, { align: "right" });
-            y += 8;
+        if (y > 270) {
+            pdf.addPage();
+            y = 20;
         }
+
+        const strSaldoIni = (saldoIni !== null && saldoIni !== undefined) 
+            ? formatearNumero(saldoIni) + " €" 
+            : "-";
+
+        pdf.text(meses[i], 15, y);
+        pdf.text(strSaldoIni, 65, y, { align: "right" });
+        pdf.text(formatearNumero(ing) + " €", 105, y, { align: "right" });
+        pdf.text(formatearNumero(gas) + " €", 145, y, { align: "right" });
+        pdf.text(formatearNumero(saldoMes) + " €", 195, y, { align: "right" });
+        y += 7;
     }
 
+    // Fila de totales del periodo
     const saldoAnual = totalIngresos - totalGastos;
-    y += 4;
-    pdf.line(20, y, 190, y);
-    y += 8;
+    y += 2;
+    pdf.line(15, y, 195, y);
+    y += 7;
 
     pdf.setFont("helvetica", "bold");
-    pdf.text("TOTAL ANUAL", 20, y);
-    pdf.text(formatearNumero(totalIngresos) + " €", 80, y, { align: "right" });
-    pdf.text(formatearNumero(totalGastos) + " €", 130, y, { align: "right" });
-    pdf.text(formatearNumero(saldoAnual) + " €", 180, y, { align: "right" });
+    pdf.text("TOTAL PERIODO", 15, y);
+    pdf.text("-", 65, y, { align: "right" });
+    pdf.text(formatearNumero(totalIngresos) + " €", 105, y, { align: "right" });
+    pdf.text(formatearNumero(totalGastos) + " €", 145, y, { align: "right" });
+    pdf.text(formatearNumero(saldoAnual) + " €", 195, y, { align: "right" });
 
-    pdf.save(`Informe_Anual_${anio}.pdf`);
+    // Cerrar modal y descargar
+    cerrarModalInformeAnual();
+
+    const nombreArchivo = (mesIni === mesFin)
+        ? `Informe_${meses[mesIni]}_${anio}.pdf`
+        : `Informe_${meses[mesIni]}_a_${meses[mesFin]}_${anio}.pdf`;
+
+    pdf.save(nombreArchivo);
 }
 
 function formatearFechaISOaDMY(f){
@@ -1104,6 +1228,11 @@ window.navegarMes=navegarMes; window.volverAHoy=volverAHoy;
 window.abrirModalEditar=abrirModalEditar; window.cerrarModalEditar=cerrarModalEditar; window.guardarEdicion=guardarEdicion;
 window.generarPDFAnual=generarPDFAnual; window.editarSaldoInicial=editarSaldoInicial;
 window.abrirModalComentario=abrirModalComentario; window.cerrarModalComentario=cerrarModalComentario;
+
+window.abrirModalInformeAnual = abrirModalInformeAnual;
+window.cerrarModalInformeAnual = cerrarModalInformeAnual;
+
+
 </script>
 </body>
 </html>
