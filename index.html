@@ -463,6 +463,12 @@ input[type="file"] { display: none; }
     <input id="loginEmail" type="email" placeholder="Correo electrónico">
     <input id="loginPassword" type="password" placeholder="Contraseña">
     <button id="btnLogin" type="button">Iniciar sesión</button>
+
+    <!-- Nuevo botón de Invitado -->
+    <button id="btnGuest" type="button" style="margin-top: 10px; background: var(--text-muted);">
+      Entrar como Invitado (Solo lectura)
+    </button>
+
     <p id="loginError" style="color:var(--danger); font-size:13px; margin-top:16px; display:none; font-weight: 500;"></p>
   </div>
 </div>
@@ -644,15 +650,23 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
+// === CONFIGURACIÓN DE USUARIO Y MODO INVITADO ===
+// Reemplaza "PEGA_AQUI_TU_UID_PRINCIPAL" por el UID real de tu cuenta principal de Firebase
+const MAIN_USER_UID = "lk8nVytz58R4D6St4IL4cWKbg233"; 
+
 let currentUserUid = "";
+let targetUid = "";
+let isGuestMode = false;
 
 const loginDiv = document.getElementById('loginDiv');
 const loginEmail = document.getElementById('loginEmail');
 const loginPassword = document.getElementById('loginPassword');
 const btnLogin = document.getElementById('btnLogin');
+const btnGuest = document.getElementById('btnGuest');
 const loginError = document.getElementById('loginError');
 const appDiv = document.querySelector('.app');
 
+// Inicio de sesión normal
 btnLogin.onclick = async () => {
   let email = loginEmail.value.trim();
   const password = loginPassword.value.trim();
@@ -670,22 +684,47 @@ btnLogin.onclick = async () => {
   }
 };
 
+// Inicio de sesión como Invitado (Anónimo)
+btnGuest.onclick = async () => {
+  try {
+    await auth.signInAnonymously();
+    loginError.style.display = "none";
+  } catch (error) {
+    loginError.style.display = "block";
+    loginError.textContent = 'Error al entrar como invitado: ' + error.message;
+  }
+};
+
+// Control de estado de autenticación
 auth.onAuthStateChanged(user => {
   if (user) {
     currentUserUid = user.uid;
+    isGuestMode = user.isAnonymous;
+
+    // Si es invitado, lee los datos de la cuenta principal; si no, los de su propia cuenta
+    targetUid = isGuestMode ? MAIN_USER_UID : user.uid;
+
     loginDiv.style.display = 'none';
     appDiv.style.display = 'block';
-    db.ref('usuarios/' + currentUserUid + '/finanzas').on('value', snapshot => {
+
+    aplicarModoLectura();
+
+    // Cargar datos en tiempo real de la ruta targetUid
+    db.ref('usuarios/' + targetUid + '/finanzas').on('value', snapshot => {
         const datos = snapshot.val() || [];
         localStorage.setItem("backup_finanzas", JSON.stringify(datos));
         cargar();
     });
   } else {
     currentUserUid = "";
+    targetUid = "";
+    isGuestMode = false;
     loginDiv.style.display = 'flex';
     appDiv.style.display = 'none';
   }
 });
+
+
 
 function cerrarSesion() { auth.signOut(); }
 
@@ -739,9 +778,9 @@ function volverAHoy() {
 }
 
 async function leerDatos(){
-    if(!currentUserUid) return [];
+    if(!targetUid) return [];
     try{
-        const snapshot = await db.ref('usuarios/' + currentUserUid + '/finanzas').once('value');
+        const snapshot = await db.ref('usuarios/' + targetUid + '/finanzas').once('value');
         return snapshot.val() || [];
     }catch(e){
         return JSON.parse(localStorage.getItem("backup_finanzas")) || [];
@@ -749,11 +788,42 @@ async function leerDatos(){
 }
 
 function guardar(d){
-    if(!currentUserUid) return;
+    // Bloquear guardado en Firebase si es invitado
+    if(!currentUserUid || isGuestMode) return;
     db.ref('usuarios/' + currentUserUid + '/finanzas').set(d);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+function aplicarModoLectura() {
+    const formPanel = document.querySelector('.form-panel');
+    const btnImport = document.querySelector('.btn-import');
+    const btnEditSaldo = document.querySelector('.saldo-inicial .btn-action');
+
+    if (isGuestMode) {
+        if (formPanel) formPanel.style.display = 'none';
+        if (btnImport) btnImport.style.display = 'none';
+        if (btnEditSaldo) btnEditSaldo.style.display = 'none';
+    } else {
+        if (formPanel) formPanel.style.display = 'block';
+        if (btnImport) btnImport.style.display = 'inline-flex';
+        if (btnEditSaldo) btnEditSaldo.style.display = 'inline-block';
+    }
+}
+
+
 async function agregar(){
+    // Añadir al inicio de agregar()
+if (isGuestMode) { alert("Modo lectura: No tienes permisos para añadir registros."); return; }
     const cantidadInput = document.getElementById('cantidad');
     const conceptoInput = document.getElementById('concepto');
     const comentarioInput = document.getElementById('comentario');
@@ -783,14 +853,20 @@ async function agregar(){
 }
 
 async function eliminar(id){
+
+    // Añadir al inicio de eliminar()
+if (isGuestMode) { alert("Modo lectura: No tienes permisos para eliminar registros."); return; }
+
     if(!confirm("¿Eliminar este movimiento?")) return;
     const d = await leerDatos();
     guardar(d.filter(m => m.id !== id));
 }
 
-async function cargar(){
+
+
+    async function cargar(){
     const listaCompleta = await leerDatos();
-    let i=0,g=0;
+    let i=0, g=0;
     const tablaBody = document.getElementById('tabla');
     tablaBody.innerHTML="";
 
@@ -803,27 +879,19 @@ async function cargar(){
     }
 
     const lista = listaCompleta
-        .filter(m=>{
+        .filter(m => {
             // Excluir saldo_inicial de la tabla normal
             if(!m || !m.fecha || m.tipo === 'saldo_inicial') return false; 
-            const f=new Date(m.fecha);
-            return f.getMonth()==mesSel.value && f.getFullYear()==anioSel.value;
+            const f = new Date(m.fecha);
+            return f.getMonth() == mesSel.value && f.getFullYear() == anioSel.value;
         })
-        .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
-    lista.forEach((m)=>{
-        const tr=document.createElement("tr");
-        tr.innerHTML=`
-        <td>${formatearFechaISOaDMY(m.fecha)}</td>
-        <td>
-            <div class="concepto-container">
-                <span>${m.concepto || ''}</span>
-                ${m.comentario ? `<span class="badge-nota" onclick="abrirModalComentario(${m.id})" title="Ver comentario">💬 Nota</span>` : ''}
-            </div>
-        </td>
-        <td class="ingreso">${m.tipo=="ingreso"?formatearNumero(m.cantidad):""}</td>
-        <td class="gasto">${m.tipo=="gasto"?formatearNumero(m.cantidad):""}</td>
-        <td class="actions-cell">
+    lista.forEach((m) => {
+        const tr = document.createElement("tr");
+
+        // Si es invitado (isGuestMode), la celda de acciones se queda vacía; si no, muestra los botones de editar y borrar
+        const accionesHTML = isGuestMode ? '' : `
             <button class="btn-action edit" onclick="abrirModalEditar(${m.id})" title="Editar registro">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
@@ -834,23 +902,43 @@ async function cargar(){
                     <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                 </svg>
             </button>
-        </td>
         `;
+
+        tr.innerHTML = `
+        <td>${formatearFechaISOaDMY(m.fecha)}</td>
+        <td>
+            <div class="concepto-container">
+                <span>${m.concepto || ''}</span>
+                ${m.comentario ? `<span class="badge-nota" onclick="abrirModalComentario(${m.id})" title="Ver comentario">💬 Nota</span>` : ''}
+            </div>
+        </td>
+        <td class="ingreso">${m.tipo=="ingreso"?formatearNumero(m.cantidad):""}</td>
+        <td class="gasto">${m.tipo=="gasto"?formatearNumero(m.cantidad):""}</td>
+        <td class="actions-cell">${accionesHTML}</td>
+        `;
+        
         tablaBody.appendChild(tr);
-        m.tipo=="ingreso"?i+=m.cantidad:g+=m.cantidad;
+        m.tipo=="ingreso" ? i += m.cantidad : g += m.cantidad;
     });
 
-    document.getElementById('ingresos').textContent=formatearNumero(i)+" €";
-    document.getElementById('gastos').textContent=formatearNumero(g)+" €";
+    document.getElementById('ingresos').textContent = formatearNumero(i) + " €";
+    document.getElementById('gastos').textContent = formatearNumero(g) + " €";
     
     const balance = i - g;
     const saldoCard = document.getElementById('saldo');
-    saldoCard.textContent=formatearNumero(balance)+" €";
+    saldoCard.textContent = formatearNumero(balance) + " €";
     saldoCard.style.color = balance >= 0 ? "var(--success)" : "var(--danger)";
+
+
+    
 }
 
 /* === EDICIÓN DE SALDO INICIAL === */
 async function editarSaldoInicial() {
+
+    // Añadir al inicio de editarSaldoInicial()
+if (isGuestMode) { alert("Modo lectura: No tienes permisos para modificar el saldo inicial."); return; }
+    
     let actual = document.getElementById('displaySaldoInicial').textContent;
     let defaultVal = actual !== "-" ? actual.replace(" €","").replace(/\./g,"").replace(",",".") : "";
     let val = prompt("Introduce el saldo en cuenta para el día 1 del mes seleccionado (deja en blanco para borrar):", defaultVal);
@@ -910,6 +998,10 @@ function cerrarModalEditar() {
 }
 
 async function guardarEdicion() {
+
+    // Añadir al inicio de guardarEdicion()
+if (isGuestMode) { alert("Modo lectura: No tienes permisos para editar registros."); return; }
+
     const id = parseFloat(document.getElementById('editId').value);
     const fecha = document.getElementById('editFecha').value;
     const tipo = document.getElementById('editTipo').value;
@@ -993,6 +1085,10 @@ function exportarCSV(){
 }
 
 function importarCSV(input) {
+
+    // Añadir al inicio de importarCSV()
+if (isGuestMode) { alert("Modo lectura: No tienes permisos para importar archivos."); return; }
+
     if (!input.files.length) return;
     const r = new FileReader();
     r.onload = async e => {
