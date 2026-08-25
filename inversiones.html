@@ -221,15 +221,15 @@
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         // 1. REEMPLAZA CON LOS DATOS DE TU CONSOLA FIREBASE
-               const firebaseConfig = {
-  apiKey: "AIzaSyAD5p6pmAEEmmFp5vUEmxXwfZvH6twEYuQ",
-  authDomain: "gesalquiler-a79ed.firebaseapp.com",
-  databaseURL: "https://gesalquiler-a79ed-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "gesalquiler-a79ed",
-  storageBucket: "gesalquiler-a79ed.firebasestorage.app",
-  messagingSenderId: "671148293463",
-  appId: "1:671148293463:web:fc971368b6caad046b9212"
-}
+        const firebaseConfig = {
+            apiKey: "AIzaSyAD5p6pmAEEmmFp5vUEmxXwfZvH6twEYuQ",
+            authDomain: "gesalquiler-a79ed.firebaseapp.com",
+            databaseURL: "https://gesalquiler-a79ed-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "gesalquiler-a79ed",
+            storageBucket: "gesalquiler-a79ed.firebasestorage.app",
+            messagingSenderId: "671148293463",
+            appId: "1:671148293463:web:fc971368b6caad046b9212"
+        }
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -308,6 +308,22 @@
             }
         }
 
+        // --- FUNCIONES DE FORMATEO ESTRICTO (PUNTOS Y COMAS) ---
+        function formatMoneda(valor) {
+            if (isNaN(valor)) return "0,00 €";
+            let parts = parseFloat(valor).toFixed(2).split(".");
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            return parts.join(",") + " €";
+        }
+
+        function formatPorcentaje(valor) {
+            if (isNaN(valor)) return "0,00";
+            let parts = parseFloat(valor).toFixed(2).split(".");
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            return parts.join(",");
+        }
+        // -------------------------------------------------------
+
         // 5. RENDERIZADO DE LA INTERFAZ
         function actualizarInterfaz() {
             let globalInvertido = 0;
@@ -336,11 +352,29 @@
                     const diff = reg.valor - reg.invertido;
                     const diffClase = diff >= 0 ? "positivo" : "negativo";
                     const diffSigno = diff >= 0 ? "+" : "";
+
+                    // Cálculo del cambio en la inversión aportada
+                    const prevInvertido = index > 0 ? fondo.historial[index - 1].invertido : 0;
+                    const aportacion = reg.invertido - prevInvertido;
+                    const aportacionSigno = aportacion >= 0 ? "+" : "";
+
+                    // Cálculo y lógica condicional para Variación del Beneficio
+                    let celdaVarBeneficio = '<td style="color: var(--text-muted); text-align: center;">-</td>';
+                    if (index > 0) {
+                        const prevDiff = (fondo.historial[index - 1].valor - fondo.historial[index - 1].invertido);
+                        const varBeneficio = diff - prevDiff;
+                        const varBeneficioClase = varBeneficio >= 0 ? "positivo" : "negativo";
+                        const varBeneficioSigno = varBeneficio >= 0 ? "+" : "";
+                        celdaVarBeneficio = `<td class="${varBeneficioClase}">${varBeneficioSigno}${formatMoneda(varBeneficio)}</td>`;
+                    }
+
                     return `<tr>
                         <td>${reg.fecha}</td>
-                        <td>${parseFloat(reg.invertido).toLocaleString('es-ES', {style:'currency', currency:'EUR'})}</td>
-                        <td>${parseFloat(reg.valor).toLocaleString('es-ES', {style:'currency', currency:'EUR'})}</td>
-                        <td class="${diffClase}">${diffSigno}${diff.toLocaleString('es-ES', {style:'currency', currency:'EUR'})}</td>
+                        <td>${formatMoneda(reg.invertido)}</td>
+                        <td style="color: var(--text-muted);">${index === 0 ? formatMoneda(reg.invertido) : aportacionSigno + formatMoneda(aportacion)}</td>
+                        <td>${formatMoneda(reg.valor)}</td>
+                        <td class="${diffClase}">${diffSigno}${formatMoneda(diff)}</td>
+                        ${celdaVarBeneficio}
                         <td style="text-align: right;"><button class="btn-sm btn-outline btn-borrar-registro" data-fondo-id="${fondo.id}" data-registro-index="${index}" style="color: var(--danger); border-color: transparent;">✕</button></td>
                     </tr>`;
                 }).join('');
@@ -353,8 +387,8 @@
                                 <span class="asset-badge">${fondo.categoria || 'Activo'}</span>
                             </div>
                             <div style="text-align: right;">
-                                <div><strong>Valor Actual:</strong> ${parseFloat(ultimoRegistro.valor).toLocaleString('es-ES', {style:'currency', currency:'EUR'})}</div>
-                                <div class="${claseBeneficio}" style="font-weight: 600;">Beneficio: ${signo}${beneficioFondo.toLocaleString('es-ES', {style:'currency', currency:'EUR'})}</div>
+                                <div><strong>Valor Actual:</strong> ${formatMoneda(ultimoRegistro.valor)}</div>
+                                <div class="${claseBeneficio}" style="font-weight: 600;">Beneficio: ${signo}${formatMoneda(beneficioFondo)}</div>
                                 <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
                                     <button class="btn-sm btn-outline btn-editar-activo" data-id="${fondo.id}">Modificar</button>
                                     <button class="btn-sm btn-danger btn-borrar-activo" data-id="${fondo.id}">Vender / Borrar Activo</button>
@@ -365,10 +399,18 @@
                         <div class="tabla-wrapper">
                             <table>
                                 <thead>
-                                    <tr><th>Fecha</th><th>Total Invertido</th><th>Valor a esa Fecha</th><th>Diferencia</th><th></th></tr>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Total Invertido</th>
+                                        <th>Aportación</th>
+                                        <th>Valor a esa Fecha</th>
+                                        <th>Diferencia</th>
+                                        <th>Var. Beneficio</th>
+                                        <th></th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                    ${filasHistorial || '<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">Sin registros de fecha. Añade uno abajo.</td></tr>'}
+                                    ${filasHistorial || '<tr><td colspan="7" style="text-align:center; color: var(--text-muted);">Sin registros de fecha. Añade uno abajo.</td></tr>'}
                                 </tbody>
                             </table>
                         </div>
@@ -393,15 +435,15 @@
             const colorClass = isPositive ? 'positivo' : 'negativo';
             const sign = isPositive ? '+' : '';
 
-            document.getElementById("global-invertido").textContent = inversion.toLocaleString('es-ES', {style:'currency', currency:'EUR'});
-            document.getElementById("global-valor").textContent = valor.toLocaleString('es-ES', {style:'currency', currency:'EUR'});
+            document.getElementById("global-invertido").textContent = formatMoneda(inversion);
+            document.getElementById("global-valor").textContent = formatMoneda(valor);
             
             const elBeneficio = document.getElementById("global-beneficio");
-            elBeneficio.textContent = `${sign}${beneficio.toLocaleString('es-ES', {style:'currency', currency:'EUR'})}`;
+            elBeneficio.textContent = `${sign}${formatMoneda(beneficio)}`;
             elBeneficio.className = `value ${colorClass}`;
 
             const elRentabilidad = document.getElementById("global-rentabilidad");
-            elRentabilidad.textContent = `Rentabilidad Global: ${sign}${rentabilidad.toFixed(2)}%`;
+            elRentabilidad.textContent = `Rentabilidad Global: ${sign}${formatPorcentaje(rentabilidad)}%`;
             elRentabilidad.className = `subtext ${colorClass}`;
         }
 
@@ -551,7 +593,6 @@
                 return;
             }
 
-
             // Form: Registrar Fecha
             if (target.classList.contains('form-nuevo-registro')) {
                 e.preventDefault();
@@ -580,21 +621,6 @@
                 }
                 return;
             }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         });
     </script>
 </body>
