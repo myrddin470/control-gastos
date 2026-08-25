@@ -418,7 +418,7 @@
                     <option value="Alquiler">Alquiler Inmuebles</option>
                     <option value="Otros">Otros</option>
                 </select>
-                <input type="number" id="cantIngreso" placeholder="Importe (€)" step="0.01">
+                <input type="text" inputmode="decimal" id="cantIngreso" placeholder="Importe (€)">
                 <button class="btn-action" onclick="window.addIngreso()">Añadir</button>
             </div>
             <ul class="record-list" id="listaIngresos" style="margin-top: 15px;"></ul>
@@ -426,9 +426,9 @@
 
         <div class="card">
             <h3>2. Resumen y Porcentajes</h3>
-            <div class="summary-item">Total Ingresos: <strong id="totIngresos">0.00 €</strong></div>
-            <div class="summary-item">Total Distribuido: <strong id="totDistribuido">0.00 €</strong></div>
-            <div class="summary-item">Disponible por Asignar: <strong id="totRestante" style="color: #2b8a3e;">0.00 €</strong></div>
+            <div class="summary-item">Total Ingresos: <strong id="totIngresos">0,00 €</strong></div>
+            <div class="summary-item">Total Distribuido: <strong id="totDistribuido">0,00 €</strong></div>
+            <div class="summary-item">Disponible por Asignar: <strong id="totRestante" style="color: #2b8a3e;">0,00 €</strong></div>
             <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                 <div class="summary-item"><span class="badge badge-gasto">Gastos</span> <span id="pctGastos">0%</span></div>
@@ -458,7 +458,7 @@
                     <option value="MyInvestor">MyInvestor</option>
                     <option value="Otros">Otros</option>
                 </select>
-                <input type="number" id="cantGastos" placeholder="Importe (€)" step="0.01">
+                <input type="text" inputmode="decimal" id="cantGastos" placeholder="Importe (€)">
                 <button class="btn-action" onclick="window.addDistribucion('Gastos', 'destGastos', 'bancoGastos', 'cantGastos')">Asignar</button>
             </div>
             <ul class="record-list" id="listaGastos"></ul>
@@ -479,7 +479,7 @@
                     <option value="MyInvestor">MyInvestor</option>
                     <option value="Otros">Otros</option>
                 </select>
-                <input type="number" id="cantAhorro" placeholder="Importe (€)" step="0.01">
+                <input type="text" inputmode="decimal" id="cantAhorro" placeholder="Importe (€)">
                 <button class="btn-action" onclick="window.addDistribucion('Ahorro', 'destAhorro', 'bancoAhorro', 'cantAhorro')">Asignar</button>
             </div>
             <ul class="record-list" id="listaAhorro"></ul>
@@ -500,7 +500,7 @@
                     <option value="MyInvestor">MyInvestor</option>
                     <option value="Otros">Otros</option>
                 </select>
-                <input type="number" id="cantOcio" placeholder="Importe (€)" step="0.01">
+                <input type="text" inputmode="decimal" id="cantOcio" placeholder="Importe (€)">
                 <button class="btn-action" onclick="window.addDistribucion('Ocio', 'destOcio', 'bancoOcio', 'cantOcio')">Asignar</button>
             </div>
             <ul class="record-list" id="listaOcio"></ul>
@@ -521,7 +521,7 @@
                     <option value="MyInvestor">MyInvestor</option>
                     <option value="Otros">Otros</option>
                 </select>
-                <input type="number" id="cantOtros" placeholder="Importe (€)" step="0.01">
+                <input type="text" inputmode="decimal" id="cantOtros" placeholder="Importe (€)">
                 <button class="btn-action" onclick="window.addDistribucion('Otros', 'destOtros', 'bancoOtros', 'cantOtros')">Asignar</button>
             </div>
             <ul class="record-list" id="listaOtros"></ul>
@@ -532,12 +532,10 @@
 
 <!-- LÓGICA DE FIREBASE Y APLICACIÓN -->
 <script type="module">
-    // 1. Importar Firebase Modular SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-    // 2. Configuración de Firebase proporcionada
     const firebaseConfig = {
         apiKey: "AIzaSyAD5p6pmAEEmmFp5vUEmxXwfZvH6twEYuQ",
         authDomain: "gesalquiler-a79ed.firebaseapp.com",
@@ -548,7 +546,6 @@
         appId: "1:671148293463:web:29c4b757accd6ef36b9212"
     };
 
-    // Inicializar Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
@@ -559,6 +556,27 @@
         ingresos: [],
         distribuciones: []
     };
+
+    // --- FORMATEO FORZADO (PUNTOS PARA MILES Y COMAS PARA DECIMALES) ---
+    function parseAmount(val) {
+        if (!val) return 0;
+        let clean = String(val).replace(/\./g, '').replace(',', '.');
+        let num = parseFloat(clean);
+        return isNaN(num) ? 0 : num;
+    }
+
+    function formatMoney(amount) {
+        let num = Number(amount) || 0;
+        // Redondeamos a 2 decimales para evitar desbordamientos
+        let fixed = num.toFixed(2); 
+        let partes = fixed.split('.');
+        
+        // Expresión regular para insertar el punto de miles en la parte entera (incluso de 4 cifras)
+        partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        
+        // Unimos con coma decimal y añadimos el símbolo de Euro
+        return partes.join(',') + ' €';
+    }
 
     // --- AUTENTICACIÓN ---
     window.iniciarSesion = () => {
@@ -583,7 +601,6 @@
         errorDiv.style.display = 'block';
     }
 
-    // Escuchar estado de sesión
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
@@ -591,7 +608,6 @@
             document.getElementById('appContainer').style.display = 'block';
             document.getElementById('userEmailDisplay').innerText = user.email;
             
-            // Inicializar fecha y cargar datos de Firebase
             if (!appData.mes) inicializarSelectorFechas();
             else cargarDatosFirebase();
         } else {
@@ -603,7 +619,6 @@
         }
     });
 
-    // --- BASE DE DATOS (FIREBASE SYNC) ---
     async function guardarDatosFirebase() {
         if (!currentUser || !appData.mes) return;
         const dbRef = ref(db, `usuarios/${currentUser.uid}/presupuestos/${appData.mes}`);
@@ -627,7 +642,6 @@
                 appData.ingresos = data.ingresos || [];
                 appData.distribuciones = data.distribuciones || [];
             } else {
-                // Mes nuevo sin datos
                 appData.ingresos = [];
                 appData.distribuciones = [];
             }
@@ -637,7 +651,6 @@
         }
     }
 
-    // --- LÓGICA DEL SELECTOR DE FECHAS ---
     function inicializarSelectorFechas() {
         const today = new Date();
         const selAno = document.getElementById('selAno');
@@ -678,7 +691,6 @@
         let m = document.getElementById('selMes').value;
         let y = document.getElementById('selAno').value;
         appData.mes = `${y}-${m}`;
-        // Al cambiar de fecha, descargar los datos de ese mes desde Firebase
         if(currentUser) cargarDatosFirebase();
     };
 
@@ -689,7 +701,6 @@
         document.getElementById('selMes').value = partes[1];
     }
 
-    // --- UTILIDADES ---
     function generateId() { return Math.random().toString(36).substr(2, 9); }
 
     function showAlert(msg) {
@@ -699,10 +710,9 @@
         setTimeout(() => { box.style.display = 'none'; }, 4000);
     }
 
-    // --- OPERACIONES CRUD ---
     window.addIngreso = () => {
         const tipo = document.getElementById('tipoIngreso').value;
-        const cant = parseFloat(document.getElementById('cantIngreso').value);
+        const cant = parseAmount(document.getElementById('cantIngreso').value);
         if (!cant || cant <= 0) return alert('Introduce un importe válido.');
 
         appData.ingresos.push({ id: generateId(), tipo, cantidad: cant });
@@ -720,7 +730,7 @@
     window.addDistribucion = (tipo, inputDestId, inputBancoId, inputCantId) => {
         const destino = document.getElementById(inputDestId).value.trim();
         const banco = document.getElementById(inputBancoId).value;
-        const cant = parseFloat(document.getElementById(inputCantId).value);
+        const cant = parseAmount(document.getElementById(inputCantId).value);
 
         if (!destino || !cant || cant <= 0) return alert('Introduce el concepto y una cantidad válida.');
 
@@ -729,7 +739,7 @@
         const restante = totalIngresos - totalDistribuido;
 
         if (cant > restante) {
-            showAlert(`⚠️ No puedes asignar ${cant.toFixed(2)} €. Supera el disponible restante (${restante.toFixed(2)} €).`);
+            showAlert(`⚠️ No puedes asignar ${formatMoney(cant)}. Supera el disponible restante (${formatMoney(restante)}).`);
             return;
         }
 
@@ -758,7 +768,6 @@
         }
     };
 
-    // --- INTERFAZ ---
     function updateUI() {
         const totalIngresos = appData.ingresos.reduce((acc, curr) => acc + curr.cantidad, 0);
         let totalGastos = 0, totalAhorro = 0, totalOcio = 0, totalOtros = 0;
@@ -773,10 +782,10 @@
         const totalDistribuido = totalGastos + totalAhorro + totalOcio + totalOtros;
         const restante = totalIngresos - totalDistribuido;
 
-        document.getElementById('totIngresos').innerText = totalIngresos.toFixed(2) + ' €';
-        document.getElementById('totDistribuido').innerText = totalDistribuido.toFixed(2) + ' €';
+        document.getElementById('totIngresos').innerText = formatMoney(totalIngresos);
+        document.getElementById('totDistribuido').innerText = formatMoney(totalDistribuido);
         const elRestante = document.getElementById('totRestante');
-        elRestante.innerText = restante.toFixed(2) + ' €';
+        elRestante.innerText = formatMoney(restante);
         elRestante.style.color = restante < 0 ? '#dc3545' : '#2b8a3e';
 
         const calcPct = (val) => totalIngresos > 0 ? ((val / totalIngresos) * 100).toFixed(1) + '%' : '0%';
@@ -789,7 +798,7 @@
             <li class="record-item">
                 <div class="record-header-info">
                     <span class="badge badge-ingreso">${i.tipo}</span>
-                    <strong>${i.cantidad.toFixed(2)} €</strong>
+                    <strong>${formatMoney(i.cantidad)}</strong>
                 </div>
                 <button class="delete-btn" onclick="window.deleteIngreso('${i.id}')">X</button>
             </li>
@@ -810,7 +819,7 @@
                         <strong>${d.destino}</strong>
                         <span class="bank-tag">${d.banco}</span>
                     </div>
-                    <span style="font-size: 13px; color: #333;">${d.cantidad.toFixed(2)} €</span>
+                    <span style="font-size: 13px; color: #333;">${formatMoney(d.cantidad)}</span>
                 </div>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <label class="transfer-check">
@@ -823,7 +832,6 @@
         `).join('');
     }
 
-    // --- JSON EXPORT/IMPORT ---
     window.exportJSON = () => {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
         const downloadAnchorNode = document.createElement('a');
@@ -846,7 +854,7 @@
                     appData = parsed;
                     if (appData.mes) syncSelectsConJSON(appData.mes);
                     updateUI();
-                    guardarDatosFirebase(); // Sube el JSON importado a Firebase automáticamente
+                    guardarDatosFirebase();
                 } else {
                     alert('El archivo no cumple con la estructura requerida.');
                 }
