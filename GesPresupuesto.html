@@ -435,6 +435,13 @@
 
         <div class="card">
             <h3>2. Resumen y Porcentajes</h3>
+            <div class="summary-item" style="gap: 10px; margin-bottom: 15px;">
+                <span>Saldo cuenta día 1:</span>
+                <div style="display: flex; gap: 5px; max-width: 180px; align-items: center;">
+                    <input type="text" inputmode="decimal" id="saldoDia1" placeholder="0,00 €" style="text-align: right;" onblur="window.formatearEntradaSaldo(this)" onfocus="window.desformatearEntradaSaldo(this)">
+                    <button class="btn-action" id="btnGuardarSaldo" onclick="window.guardarSaldoDia1()" title="Guardar / Editar saldo" style="padding: 10px 12px;">💾</button>
+                </div>
+            </div>
             <div class="summary-item">Total Ingresos: <strong id="totIngresos">0,00 €</strong></div>
             <div class="summary-item">Total Distribuido: <strong id="totDistribuido">0,00 €</strong></div>
             <div class="summary-item">Disponible por Asignar: <strong id="totRestante" style="color: #2b8a3e;">0,00 €</strong></div>
@@ -562,6 +569,7 @@
     let currentUser = null;
     let appData = {
         mes: '',
+        saldoDia1: 0,
         ingresos: [],
         distribuciones: []
     };
@@ -569,7 +577,7 @@
     // --- FORMATEO FORZADO (PUNTOS PARA MILES Y COMAS PARA DECIMALES) ---
     function parseAmount(val) {
         if (!val) return 0;
-        let clean = String(val).replace(/\./g, '').replace(',', '.');
+        let clean = String(val).replace(/€/g, '').replace(/\./g, '').replace(',', '.').trim();
         let num = parseFloat(clean);
         return isNaN(num) ? 0 : num;
     }
@@ -581,6 +589,25 @@
         partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         return partes.join(',') + ' €';
     }
+
+    window.formatearEntradaSaldo = (el) => {
+        let val = parseAmount(el.value);
+        if (val > 0) {
+            el.value = formatMoney(val);
+        } else {
+            el.value = '';
+        }
+    };
+
+    window.desformatearEntradaSaldo = (el) => {
+        let val = parseAmount(el.value);
+        if (val > 0) {
+            let fixed = val.toFixed(2);
+            el.value = fixed.replace('.', ',');
+        } else {
+            el.value = '';
+        }
+    };
 
     // --- AUTENTICACIÓN ---
     window.iniciarSesion = () => {
@@ -643,9 +670,11 @@
             if (snapshot.exists()) {
                 const data = snapshot.val();
                 appData.mes = data.mes;
+                appData.saldoDia1 = data.saldoDia1 || 0;
                 appData.ingresos = data.ingresos || [];
                 appData.distribuciones = data.distribuciones || [];
             } else {
+                appData.saldoDia1 = 0;
                 appData.ingresos = [];
                 appData.distribuciones = [];
             }
@@ -714,6 +743,19 @@
         setTimeout(() => { box.style.display = 'none'; }, 4000);
     }
 
+    window.guardarSaldoDia1 = () => {
+        const val = document.getElementById('saldoDia1').value;
+        appData.saldoDia1 = parseAmount(val);
+        const inputSaldo = document.getElementById('saldoDia1');
+        if (appData.saldoDia1 > 0) {
+            inputSaldo.value = formatMoney(appData.saldoDia1);
+        } else {
+            inputSaldo.value = '';
+        }
+        guardarDatosFirebase();
+        showAlert("✅ Saldo de cuenta día 1 guardado correctamente.");
+    };
+
     window.addIngreso = () => {
         const descripcion = document.getElementById('descIngreso').value.trim();
         const tipo = document.getElementById('tipoIngreso').value;
@@ -774,8 +816,16 @@
         }
     };
 
-    function updateUI() {
+    function updateUI(syncInput = true) {
+        if (syncInput) {
+            const inputSaldo = document.getElementById('saldoDia1');
+            if (inputSaldo) {
+                inputSaldo.value = appData.saldoDia1 ? formatMoney(appData.saldoDia1) : '';
+            }
+        }
+
         const totalIngresos = appData.ingresos.reduce((acc, curr) => acc + curr.cantidad, 0);
+        
         let totalGastos = 0, totalAhorro = 0, totalOcio = 0, totalOtros = 0;
 
         appData.distribuciones.forEach(d => {
@@ -861,6 +911,7 @@
                 const parsed = JSON.parse(e.target.result);
                 if (parsed.ingresos && parsed.distribuciones) {
                     appData = parsed;
+                    if (appData.saldoDia1 === undefined) appData.saldoDia1 = 0;
                     if (appData.mes) syncSelectsConJSON(appData.mes);
                     updateUI();
                     guardarDatosFirebase();
