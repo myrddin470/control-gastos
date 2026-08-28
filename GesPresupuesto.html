@@ -227,6 +227,12 @@
         }
 
         .form-ingresos {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .form-ingresos-row {
             display: grid;
             grid-template-columns: 1fr 1fr auto;
             gap: 10px;
@@ -413,13 +419,16 @@
         <div class="card">
             <h3>1. Registrar Ingresos</h3>
             <div class="form-ingresos">
-                <select id="tipoIngreso">
-                    <option value="Sueldo">Sueldo</option>
-                    <option value="Alquiler">Alquiler Inmuebles</option>
-                    <option value="Otros">Otros</option>
-                </select>
-                <input type="text" inputmode="decimal" id="cantIngreso" placeholder="Importe (€)">
-                <button class="btn-action" onclick="window.addIngreso()">Añadir</button>
+                <input type="text" id="descIngreso" placeholder="Especificar / Inmueble / Detalle">
+                <div class="form-ingresos-row">
+                    <select id="tipoIngreso">
+                        <option value="Sueldo">Sueldo</option>
+                        <option value="Alquiler">Alquiler Inmuebles</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+                    <input type="text" inputmode="decimal" id="cantIngreso" placeholder="Importe (€)">
+                    <button class="btn-action" onclick="window.addIngreso()">Añadir</button>
+                </div>
             </div>
             <ul class="record-list" id="listaIngresos" style="margin-top: 15px;"></ul>
         </div>
@@ -567,14 +576,9 @@
 
     function formatMoney(amount) {
         let num = Number(amount) || 0;
-        // Redondeamos a 2 decimales para evitar desbordamientos
         let fixed = num.toFixed(2); 
         let partes = fixed.split('.');
-        
-        // Expresión regular para insertar el punto de miles en la parte entera (incluso de 4 cifras)
         partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        
-        // Unimos con coma decimal y añadimos el símbolo de Euro
         return partes.join(',') + ' €';
     }
 
@@ -711,11 +715,13 @@
     }
 
     window.addIngreso = () => {
+        const descripcion = document.getElementById('descIngreso').value.trim();
         const tipo = document.getElementById('tipoIngreso').value;
         const cant = parseAmount(document.getElementById('cantIngreso').value);
         if (!cant || cant <= 0) return alert('Introduce un importe válido.');
 
-        appData.ingresos.push({ id: generateId(), tipo, cantidad: cant });
+        appData.ingresos.push({ id: generateId(), descripcion, tipo, cantidad: cant });
+        document.getElementById('descIngreso').value = '';
         document.getElementById('cantIngreso').value = '';
         updateUI();
         guardarDatosFirebase();
@@ -796,9 +802,12 @@
 
         document.getElementById('listaIngresos').innerHTML = appData.ingresos.map(i => `
             <li class="record-item">
-                <div class="record-header-info">
-                    <span class="badge badge-ingreso">${i.tipo}</span>
-                    <strong>${formatMoney(i.cantidad)}</strong>
+                <div class="record-info">
+                    <div class="record-header-info">
+                        <span class="badge badge-ingreso">${i.tipo}</span>
+                        ${i.descripcion ? `<strong>${i.descripcion}</strong>` : ''}
+                    </div>
+                    <span style="font-size: 13px; color: #333;">${formatMoney(i.cantidad)}</span>
                 </div>
                 <button class="delete-btn" onclick="window.deleteIngreso('${i.id}')">X</button>
             </li>
