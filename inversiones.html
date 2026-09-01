@@ -151,6 +151,31 @@
             <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Inicia sesión para cargar tus datos...</div>
         </section>
 
+        <!-- RESUMEN MENSUAL GLOBAL DE LA CARTERA -->
+        <section style="margin-top: 2.5rem; margin-bottom: 2rem;">
+            <h2 style="font-size: 1.25rem; margin-bottom: 1rem;">Evolución Mensual Global</h2>
+            <div class="fondo-container">
+                <div class="tabla-wrapper" style="margin-bottom: 0;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mes</th>
+                                <th>Total Inversión</th>
+                                <th>Invertido Mes</th>
+                                <th>Valor Actual de Cartera</th>
+                                <th>Beneficio Global</th>
+                                <th>Diferencia Beneficio</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-resumen-mensual">
+                            <tr><td colspan="7" style="text-align:center; color: var(--text-muted);">Cargando historial mensual...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
         <!-- PIE DE PÁGINA: EXPORTAR E IMPORTAR -->
         <footer>
             <button class="btn btn-sm btn-outline" id="btn-exportar-json">📥 Exportar JSON</button>
@@ -334,6 +359,7 @@
             if (fondos.length === 0) {
                 contenedor.innerHTML = '<div class="empty-state">No tienes activos registrados. Haz clic en <b>"+ Nuevo Activo"</b> para añadir el primero.</div>';
                 actualizarKPIs(0, 0);
+                actualizarResumenMensual();
                 return;
             }
 
@@ -426,6 +452,7 @@
             });
 
             actualizarKPIs(globalInvertido, globalValor);
+            actualizarResumenMensual();
         }
 
         function actualizarKPIs(inversion, valor) {
@@ -445,6 +472,119 @@
             const elRentabilidad = document.getElementById("global-rentabilidad");
             elRentabilidad.textContent = `Rentabilidad Global: ${sign}${formatPorcentaje(rentabilidad)}%`;
             elRentabilidad.className = `subtext ${colorClass}`;
+        }
+
+        // 5B. RENDERIZADO DEL RESUMEN MENSUAL GLOBAL DE LA CARTERA
+        function actualizarResumenMensual() {
+            const tbody = document.getElementById("tabla-resumen-mensual");
+            tbody.innerHTML = "";
+
+            // 1. Recopilar todos los meses únicos existentes en los datos de todos los activos
+            const mesesMap = {}; // { 'MM/YYYY': { year, month } }
+
+            fondos.forEach(f => {
+                if (f.historial) {
+                    f.historial.forEach(r => {
+                        const partes = r.fecha.split('/');
+                        if (partes.length === 3) {
+                            const mesAño = `${partes[1]}/${partes[2]}`;
+                            mesesMap[mesAño] = {
+                                mesAño: mesAño,
+                                year: parseInt(partes[2]),
+                                month: parseInt(partes[1])
+                            };
+                        }
+                    });
+                }
+            });
+
+            const listaMeses = Object.values(mesesMap).sort((a, b) => {
+                if (a.year !== b.year) return a.year - b.year;
+                return a.month - b.month;
+            });
+
+            if (listaMeses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-muted);">No hay registros históricos para mostrar la evolución mensual.</td></tr>';
+                return;
+            }
+
+            // 2. Para cada mes, calcular la suma del total invertido y valor actual de la cartera
+            const datosMensuales = listaMeses.map(m => {
+                let totalInvertidoMes = 0;
+                let totalValorMes = 0;
+
+                fondos.forEach(f => {
+                    if (f.historial && f.historial.length > 0) {
+                        // Buscar el registro de este activo para este mes
+                        const registrosMes = f.historial.filter(r => {
+                            const p = r.fecha.split('/');
+                            return p.length === 3 && `${p[1]}/${p[2]}` === m.mesAño;
+                        });
+
+                        if (registrosMes.length > 0) {
+                            // Si hay más de uno en el mes, tomar el más reciente
+                            const ultimoDelMes = registrosMes[registrosMes.length - 1];
+                            totalInvertidoMes += parseFloat(ultimoDelMes.invertido);
+                            totalValorMes += parseFloat(ultimoDelMes.valor);
+                        } else {
+                            // Si no hay registro exactamente en este mes, tomar el valor acumulado hasta ese mes
+                            const registrosAnteriores = f.historial.filter(r => {
+                                const p = r.fecha.split('/');
+                                const y = parseInt(p[2]);
+                                const mon = parseInt(p[1]);
+                                return y < m.year || (y === m.year && mon < m.month);
+                            });
+
+                            if (registrosAnteriores.length > 0) {
+                                const ultimoAnt = registrosAnteriores[registrosAnteriores.length - 1];
+                                totalInvertidoMes += parseFloat(ultimoAnt.invertido);
+                                totalValorMes += parseFloat(ultimoAnt.valor);
+                            }
+                        }
+                    }
+                });
+
+                const beneficioMes = totalValorMes - totalInvertidoMes;
+
+                return {
+                    mesAño: m.mesAño,
+                    totalInvertido: totalInvertidoMes,
+                    totalValor: totalValorMes,
+                    beneficio: beneficioMes
+                };
+            });
+
+            // 3. Generar las filas de la tabla agregando las diferencias
+            datosMensuales.forEach((d, index) => {
+                const prevInvertido = index > 0 ? datosMensuales[index - 1].totalInvertido : 0;
+                const invertidoMes = d.totalInvertido - prevInvertido;
+                const invertidoSigno = invertidoMes >= 0 ? "+" : "";
+
+                const prevBeneficio = index > 0 ? datosMensuales[index - 1].beneficio : 0;
+                const diffBeneficio = d.beneficio - prevBeneficio;
+                
+                const beneficioClase = d.beneficio >= 0 ? "positivo" : "negativo";
+                const beneficioSigno = d.beneficio >= 0 ? "+" : "";
+
+                let celdaDiffBeneficio = '<td style="color: var(--text-muted); text-align: center;">-</td>';
+                if (index > 0) {
+                    const diffBeneficioClase = diffBeneficio >= 0 ? "positivo" : "negativo";
+                    const diffBeneficioSigno = diffBeneficio >= 0 ? "+" : "";
+                    celdaDiffBeneficio = `<td class="${diffBeneficioClase}">${diffBeneficioSigno}${formatMoneda(diffBeneficio)}</td>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${d.mesAño}</strong></td>
+                        <td>${formatMoneda(d.totalInvertido)}</td>
+                        <td style="color: var(--text-muted);">${index === 0 ? formatMoneda(d.totalInvertido) : invertidoSigno + formatMoneda(invertidoMes)}</td>
+                        <td>${formatMoneda(d.totalValor)}</td>
+                        <td class="${beneficioClase}">${beneficioSigno}${formatMoneda(d.beneficio)}</td>
+                        ${celdaDiffBeneficio}
+                        <td style="text-align: right;"><button class="btn-sm btn-outline btn-borrar-mes" data-mes="${d.mesAño}" style="color: var(--danger); border-color: transparent;">✕</button></td>
+                    </tr>
+                `;
+            });
         }
 
         // 6. EXPORTAR E IMPORTAR JSON
@@ -547,6 +687,24 @@
                 const fondoObj = fondos.find(f => f.id === fId);
                 if (fondoObj && fondoObj.historial) {
                     fondoObj.historial.splice(rIdx, 1);
+                    guardarDatos();
+                }
+                return;
+            }
+
+            // Borrar Mes Completo en el Resumen Mensual Global
+            const btnBorrarMes = target.closest('.btn-borrar-mes');
+            if (btnBorrarMes) {
+                const mesAEliminar = btnBorrarMes.getAttribute('data-mes');
+                if (confirm(`¿Estás seguro de que deseas eliminar todas las entradas asociadas al mes ${mesAEliminar} de todos tus activos?`)) {
+                    fondos.forEach(f => {
+                        if (f.historial) {
+                            f.historial = f.historial.filter(r => {
+                                const p = r.fecha.split('/');
+                                return p.length === 3 && `${p[1]}/${p[2]}` !== mesAEliminar;
+                            });
+                        }
+                    });
                     guardarDatos();
                 }
                 return;
