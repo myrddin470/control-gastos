@@ -426,7 +426,7 @@
                         <option value="Alquiler">Alquiler Inmuebles</option>
                         <option value="Otros">Otros</option>
                     </select>
-                    <input type="text" inputmode="decimal" id="cantIngreso" placeholder="Importe (€)">
+                    <input type="text" inputmode="decimal" id="cantIngreso" placeholder="Importe (€)" onblur="window.formatearEntradaMonto(this)" onfocus="window.desformatearEntradaMonto(this)">
                     <button class="btn-action" onclick="window.addIngreso()">Añadir</button>
                 </div>
             </div>
@@ -438,7 +438,7 @@
             <div class="summary-item" style="gap: 10px; margin-bottom: 15px;">
                 <span>Saldo cuenta día 15:</span>
                 <div style="display: flex; gap: 5px; max-width: 180px; align-items: center;">
-                    <input type="text" inputmode="decimal" id="saldoDia1" placeholder="0,00 €" style="text-align: right;" onblur="window.formatearEntradaSaldo(this)" onfocus="window.desformatearEntradaSaldo(this)">
+                    <input type="text" inputmode="decimal" id="saldoDia1" placeholder="0,00 €" style="text-align: right;" onblur="window.formatearEntradaMonto(this)" onfocus="window.desformatearEntradaMonto(this)">
                     <button class="btn-action" id="btnGuardarSaldo" onclick="window.guardarSaldoDia1()" title="Guardar / Editar saldo" style="padding: 10px 12px;">💾</button>
                 </div>
             </div>
@@ -474,7 +474,7 @@
                     <option value="MyInvestor">MyInvestor</option>
                     <option value="Otros">Otros</option>
                 </select>
-                <input type="text" inputmode="decimal" id="cantGastos" placeholder="Importe (€)">
+                <input type="text" inputmode="decimal" id="cantGastos" placeholder="Importe (€)" onblur="window.formatearEntradaMonto(this)" onfocus="window.desformatearEntradaMonto(this)">
                 <button class="btn-action" onclick="window.addDistribucion('Gastos', 'destGastos', 'bancoGastos', 'cantGastos')">Asignar</button>
             </div>
             <ul class="record-list" id="listaGastos"></ul>
@@ -495,7 +495,7 @@
                     <option value="MyInvestor">MyInvestor</option>
                     <option value="Otros">Otros</option>
                 </select>
-                <input type="text" inputmode="decimal" id="cantAhorro" placeholder="Importe (€)">
+                <input type="text" inputmode="decimal" id="cantAhorro" placeholder="Importe (€)" onblur="window.formatearEntradaMonto(this)" onfocus="window.desformatearEntradaMonto(this)">
                 <button class="btn-action" onclick="window.addDistribucion('Ahorro', 'destAhorro', 'bancoAhorro', 'cantAhorro')">Asignar</button>
             </div>
             <ul class="record-list" id="listaAhorro"></ul>
@@ -516,7 +516,7 @@
                     <option value="MyInvestor">MyInvestor</option>
                     <option value="Otros">Otros</option>
                 </select>
-                <input type="text" inputmode="decimal" id="cantOcio" placeholder="Importe (€)">
+                <input type="text" inputmode="decimal" id="cantOcio" placeholder="Importe (€)" onblur="window.formatearEntradaMonto(this)" onfocus="window.desformatearEntradaMonto(this)">
                 <button class="btn-action" onclick="window.addDistribucion('Ocio', 'destOcio', 'bancoOcio', 'cantOcio')">Asignar</button>
             </div>
             <ul class="record-list" id="listaOcio"></ul>
@@ -537,7 +537,7 @@
                     <option value="MyInvestor">MyInvestor</option>
                     <option value="Otros">Otros</option>
                 </select>
-                <input type="text" inputmode="decimal" id="cantOtros" placeholder="Importe (€)">
+                <input type="text" inputmode="decimal" id="cantOtros" placeholder="Importe (€)" onblur="window.formatearEntradaMonto(this)" onfocus="window.desformatearEntradaMonto(this)">
                 <button class="btn-action" onclick="window.addDistribucion('Otros', 'destOtros', 'bancoOtros', 'cantOtros')">Asignar</button>
             </div>
             <ul class="record-list" id="listaOtros"></ul>
@@ -574,10 +574,34 @@
         distribuciones: []
     };
 
-    // --- FORMATEO FORZADO (PUNTOS PARA MILES Y COMAS PARA DECIMALES) ---
+    // --- FORMATEO INTELIGENTE (PUNTO DEL NUMÉRICO COMO DECIMAL / PUNTOS MILES, COMA DECIMAL) ---
     function parseAmount(val) {
         if (!val) return 0;
-        let clean = String(val).replace(/€/g, '').replace(/\./g, '').replace(',', '.').trim();
+        let clean = String(val).replace(/€/g, '').trim();
+        
+        // Si contiene tanto puntos como comas (ej. 12.345,25)
+        if (clean.includes('.') && clean.includes(',')) {
+            clean = clean.replace(/\./g, '').replace(',', '.');
+        } 
+        // Si solo contiene puntos (ej. ingresado con el teclado numérico "12345.25" o "12.25")
+        else if (clean.includes('.') && !clean.includes(',')) {
+            // Evaluamos si el punto actúa como separador de miles tradicional o decimal del numérico.
+            // Si hay más de un punto, o si el punto está seguido de exactamente 3 dígitos al final sin más decimales (ej 12.345), 
+            // tratamos el punto como miles. Si es estilo numérico (ej 12345.25 o 12.25), lo tratamos como decimal.
+            let parts = clean.split('.');
+            if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3 && !parts[0].length <= 2)) {
+                // Posible formato de miles con puntos
+                clean = clean.replace(/\./g, '');
+            } else {
+                // Tratamos el punto del teclado numérico como decimal
+                clean = clean.replace('.', '.');
+            }
+        } 
+        // Si solo contiene comas (ej. formato español escrito a mano "12345,25")
+        else if (clean.includes(',') && !clean.includes('.')) {
+            clean = clean.replace(',', '.');
+        }
+
         let num = parseFloat(clean);
         return isNaN(num) ? 0 : num;
     }
@@ -590,7 +614,7 @@
         return partes.join(',') + ' €';
     }
 
-    window.formatearEntradaSaldo = (el) => {
+    window.formatearEntradaMonto = (el) => {
         let val = parseAmount(el.value);
         if (val > 0) {
             el.value = formatMoney(val);
@@ -599,7 +623,7 @@
         }
     };
 
-    window.desformatearEntradaSaldo = (el) => {
+    window.desformatearEntradaMonto = (el) => {
         let val = parseAmount(el.value);
         if (val > 0) {
             let fixed = val.toFixed(2);
